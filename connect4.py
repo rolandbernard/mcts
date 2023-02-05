@@ -1,35 +1,25 @@
 
 import numpy as np
-from typing import List, Union
+from typing import List
 
 
 class Game(object):
     grid: np.ndarray
     history: List[int]
+    value: int
 
-    def __init__(self, grid: Union[None, np.ndarray] = None):
-        self.grid = grid if grid is not None else np.zeros((7, 6))
+    def __init__(self, history: List[int] = []):
+        self.grid = np.zeros((7, 6))
         self.history = []
+        self.value = 0
+        for a in history:
+            self.apply(a)
 
     def terminal(self) -> bool:
         return bool(np.all(self.grid[:, -1] != 0)) or self.terminal_value(self.to_play()) != 0
 
     def terminal_value(self, to_play: int) -> int:
-        def diagonals(grid: np.ndarray):
-            for i in range(len(grid) - 4):
-                yield grid[i:, :].diagonal()
-                yield grid[:, i:].diagonal()
-                yield np.flip(grid, 1)[i:, :].diagonal()
-                yield np.flip(grid, 1)[:, i:].diagonal()
-        to_play = 1 if to_play == self.to_play() else -1
-        for lines in (self.grid, self.grid.T, diagonals(self.grid)):
-            for line in lines:
-                conv = np.convolve(line, [1] * 4, mode='valid')
-                if np.any(conv >= 4):
-                    return to_play
-                if np.any(conv <= -4):
-                    return -to_play
-        return 0
+        return self.value if to_play == self.to_play() else -self.value
 
     def all_actions(self) -> List[int]:
         return list(range(len(self.grid)))
@@ -42,11 +32,27 @@ class Game(object):
 
     def apply(self, action: int):
         self.history.append(action)
-        self.grid[action, np.nonzero(self.grid[action] == 0)[0][0]] = 1
+        row = np.nonzero(self.grid[action] == 0)[0][0]
+        self.grid[action, row] = 1
         self.grid *= -1
+        for line in (
+            self.grid[action, :], self.grid[:, row],
+            np.diagonal(self.grid, row - action),
+            np.diagonal(np.flip(self.grid, 0), row -
+                        (self.grid.shape[0] - 1 - action))
+        ):
+            cnt = 0
+            for v in line:
+                if v == -1:
+                    cnt += 1
+                else:
+                    cnt = 0
+                if cnt == 4:
+                    self.value = -1
+                    return
 
     def copy(self) -> 'Game':
-        return Game(self.grid.copy())
+        return Game(self.history)
 
     def to_play(self) -> int:
         return len(self.history) % 2
