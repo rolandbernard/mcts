@@ -55,10 +55,10 @@ def select_child(node: Node) -> Tuple[int, Node]:
     return max(node.children.items(), key=lambda x: ucb_score(node, x[1]))
 
 
-def run_mcts(game: Game, root: Node):
+def run_mcts(game: Game, root: Node, n: int):
     if not root.expanded():
         expand(root, game)
-    for _ in range(10_000):
+    for _ in range(n):
         search_game = game.copy()
         search_path = [root]
         node = root

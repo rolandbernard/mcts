@@ -1,6 +1,6 @@
 
 import numpy as np
-from typing import List
+from typing import List, Union
 
 
 class Game(object):
@@ -8,12 +8,15 @@ class Game(object):
     history: List[int]
     value: int
 
-    def __init__(self, history: List[int] = []):
-        self.grid = np.zeros((7, 6))
-        self.history = []
-        self.value = 0
-        for a in history:
-            self.apply(a)
+    def __init__(self, copy: Union[None, 'Game'] = None):
+        if copy is None:
+            self.grid = np.zeros((7, 6))
+            self.history = []
+            self.value = 0
+        else:
+            self.grid = copy.grid.copy()
+            self.history = copy.history.copy()
+            self.value = copy.value
 
     def terminal(self) -> bool:
         return bool(np.all(self.grid[:, -1] != 0)) or self.terminal_value(self.to_play()) != 0
@@ -52,7 +55,7 @@ class Game(object):
                     return
 
     def copy(self) -> 'Game':
-        return Game(self.history)
+        return Game(self)
 
     def to_play(self) -> int:
         return len(self.history) % 2
