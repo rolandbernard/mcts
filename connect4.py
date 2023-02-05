@@ -19,7 +19,7 @@ class Game(object):
             self.value = copy.value
 
     def terminal(self) -> bool:
-        return bool(np.all(self.grid[:, -1] != 0)) or self.terminal_value(self.to_play()) != 0
+        return len(self.history) >= 7 * 6 or self.value != 0
 
     def terminal_value(self, to_play: int) -> int:
         return self.value if to_play == self.to_play() else -self.value
