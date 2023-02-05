@@ -1,0 +1,4 @@
+.vscode/
+.vim/
+tmp.*
+*.pyc
