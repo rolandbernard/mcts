@@ -2,7 +2,15 @@
 import numpy as np
 import random
 from typing import List, Dict, Tuple
-from connect4 import Game
+from dataclasses import dataclass
+
+from game.connect4 import Game
+
+
+@dataclass
+class MctsConfig:
+    pucb_c: float = 1.25
+    exp_thr: int = 0
 
 
 class Node(object):
@@ -45,17 +53,18 @@ def backpropagate(path: List[Node], value: int, to_play: int):
         node.visit_count += 1
 
 
-def ucb_score(parent: Node, child: Node) -> float:
-    prior_score = 1.25 * np.sqrt(parent.visit_count) / (1 + child.visit_count)
+def ucb_score(config: MctsConfig, parent: Node, child: Node) -> float:
+    prior_score = config.pucb_c * \
+        np.sqrt(parent.visit_count) / (1 + child.visit_count)
     value_score = (child.value() + 1) / 2
     return prior_score + value_score
 
 
-def select_child(node: Node) -> Tuple[int, Node]:
-    return max(node.children.items(), key=lambda x: ucb_score(node, x[1]))
+def select_child(config: MctsConfig, node: Node) -> Tuple[int, Node]:
+    return max(node.children.items(), key=lambda x: ucb_score(config, node, x[1]))
 
 
-def run_mcts(game: Game, root: Node, n: int):
+def run_mcts(config: MctsConfig, game: Game, root: Node, n: int):
     if not root.expanded():
         expand(root, game)
     for _ in range(n):
@@ -63,10 +72,11 @@ def run_mcts(game: Game, root: Node, n: int):
         search_path = [root]
         node = root
         while node.expanded():
-            action, node = select_child(node)
+            action, node = select_child(config, node)
             search_game.apply(action)
             search_path.append(node)
-        expand(node, search_game)
+        if node.visit_count >= config.exp_thr:
+            expand(node, search_game)
         to_play = search_game.to_play()
         value = rollout(search_game, to_play)
         backpropagate(search_path, value, to_play)

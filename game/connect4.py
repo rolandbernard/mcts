@@ -60,7 +60,7 @@ class Game(object):
     def to_play(self) -> int:
         return len(self.history) % 2
 
-    def render(self):
+    def render(self, suggestions: Union[None, List[float]] = None):
         to_play = 1 if self.to_play() == 0 else -1
         for row in range(self.grid.shape[1]):
             print('|', end='')
@@ -68,7 +68,13 @@ class Game(object):
                 value = self.grid[col, -row - 1] * to_play
                 print({0: ' ', 1: 'X', -1: 'O'}[value], end='|')
             print()
-        print(end=' ')
-        for col in range(self.grid.shape[0]):
-            print(col, end=' ')
+        if suggestions is not None:
+            best = max(suggestions)
+            for col in range(self.grid.shape[0]):
+                q = '*' if suggestions[col] == best else (
+                    '.' if suggestions[col] > best / 2 else ' ')
+                print(f'{q}{col}', end='')
+        else:
+            for col in range(self.grid.shape[0]):
+                print(f' {col}', end='')
         print()

@@ -1,69 +1,49 @@
 
-from connect4 import Game
-from mcts import Node, run_mcts, select_action
-from threading import Thread
-from time import sleep
-from typing import Union, Tuple
+from argparse import ArgumentParser
+from typing import List
 
+from game.connect4 import Game
+from game.player import Player
+from game.human import Human
+from mcts.player import MctsPlayer
 
-class MctsThread(Thread):
-    game: Union[None, Game]
-    root: Node
-
-    def __init__(self, game: Game):
-        super().__init__()
-        self.game = game
-        self.root = Node()
-
-    def apply(self, action: int) -> float:
-        assert self.game is not None
-        self.game.apply(action)
-        if action in self.root.children:
-            self.root = self.root.children[action]
-        else:
-            self.root = Node()
-        return self.root.value()
-
-    def take_action(self) -> Tuple[int, float]:
-        action = select_action(self.root)
-        return action, self.apply(action)
-
-    def terminate(self):
-        self.game = None
-
-    def run(self):
-        while self.game is not None:
-            run_mcts(self.game, self.root, 50)
-            sleep(0)
+PLAYERS = {
+    'human': Human,
+    'mcts': MctsPlayer,
+}
 
 
 def main():
+    parser = ArgumentParser(
+        prog='play.py', description='play single games of connect 4')
+    parser.add_argument('-p1', '--player1',
+                        choices=PLAYERS.keys(), default='human')
+    parser.add_argument('-p2', '--player2',
+                        choices=PLAYERS.keys(), default='human')
+    args = parser.parse_args()
     game = Game()
-    search = MctsThread(game)
+    players: List[Player] = [PLAYERS[p]()
+                             for p in (args.player1, args.player2)]
+    for player in players:
+        player.start()
     try:
-        search.start()
-        game.render()
         while not game.terminal():
-            if game.to_play() == 0:
-                action = None
-                while action not in game.legal_actions():
-                    print(f'Player {game.to_play()} move: ', end='')
-                    action = int(input())
-                search.apply(action)
-            else:
-                sleep(5)
-                action, value = search.take_action()
-                print(f'Player {game.to_play()} move: {action} ({value:.2f})')
             game.render()
+            action = players[game.to_play()].select()
+            game.apply(action)
+            for player in players:
+                player.apply(action)
+        game.render()
         if game.terminal_value(0) > 0:
-            print('Game terminated and player 0 won')
+            print('game terminated and player 1 won')
         elif game.terminal_value(1) > 0:
-            print('Game terminated and player 1 won')
+            print('game terminated and player 2 won')
         else:
-            print('Game terminated in a draw')
+            print('game terminated in a draw')
     except:
         pass
-    search.terminate()
+    for player in players:
+        player.terminate()
 
 
 if __name__ == '__main__':
