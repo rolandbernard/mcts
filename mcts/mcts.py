@@ -1,5 +1,5 @@
 
-import numpy as np
+import math
 import random
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
@@ -10,10 +10,10 @@ from game.connect4 import Game
 @dataclass
 class MctsConfig:
     pucb_c: float = 1.25
-    exp_thr: int = 0
+    exp_thr: int = 10
 
 
-class Node(object):
+class Node:
     visit_count: int
     value_sum: float
     to_play: int
@@ -55,7 +55,7 @@ def backpropagate(path: List[Node], value: int, to_play: int):
 
 def ucb_score(config: MctsConfig, parent: Node, child: Node) -> float:
     prior_score = config.pucb_c * \
-        np.sqrt(parent.visit_count) / (1 + child.visit_count)
+        math.sqrt(parent.visit_count) / (1 + child.visit_count)
     value_score = (child.value() + 1) / 2
     return prior_score + value_score
 
@@ -87,7 +87,5 @@ def select_action(node: Node, temp: float = 0) -> int:
     if temp == 0:
         return max(visit_counts)[1]
     else:
-        prop = np.array([v for v, _ in visit_counts])
-        prop **= 1 / temp
-        prop /= np.sum(prop)
-        return np.random.choice([a for _, a in visit_counts], p=prop)
+        prop = [v**1 / temp for v, _ in visit_counts]
+        return random.choices([a for _, a in visit_counts], weights=prop)[0]

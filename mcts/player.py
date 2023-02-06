@@ -1,9 +1,8 @@
 
-from game.player import Player
-from game.connect4 import Game
 from typing import List
 
 from mcts.mcts import MctsConfig, Node, run_mcts, select_action
+from game.player import Player
 
 
 class MctsPlayer(Player):
@@ -16,13 +15,14 @@ class MctsPlayer(Player):
         self.root = Node()
 
     def think(self):
-        run_mcts(self.config, self.game, self.root, 50)
+        run_mcts(self.config, self.game, self.root, 1_000)
 
-    def apply_action(self, action: int):
+    def apply_action(self, action: int) -> float:
         if action in self.root.children:
             self.root = self.root.children[action]
         else:
             self.root = Node()
+        return self.root.value()
 
     def policy(self) -> List[float]:
         assert self.game is not None

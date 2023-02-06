@@ -13,10 +13,12 @@ class Player(Process):
 
     def __init__(self):
         super().__init__()
+        self.game = Game()
         self.parent_conn, self.child_conn = Pipe()
 
-    def apply(self, action: int):
+    def apply(self, action: int) -> float:
         self.parent_conn.send(('apply', action))
+        return self.parent_conn.recv()
 
     def terminate(self):
         self.parent_conn.send(('terminate',))
@@ -29,24 +31,23 @@ class Player(Process):
     def think(self):
         raise NotImplementedError
 
-    def apply_action(self, action: int):
+    def apply_action(self, action: int) -> float:
         raise NotImplementedError
 
     def select_action(self) -> int:
         raise NotImplementedError
 
     def run(self):
-        self.game = Game()
         while True:
             if self.child_conn.poll():
                 msg = self.child_conn.recv()
-                match msg:
-                    case ('terminate',):
-                        return
-                    case ('select',):
-                        self.child_conn.send(self.select_action())
-                    case ('apply', action):
-                        self.game.apply(action)
-                        self.apply_action(action)
+                if msg[0] == 'terminate':
+                    return
+                elif msg[0] == 'select':
+                    self.child_conn.send(self.select_action())
+                elif msg[0] == 'apply':
+                    self.game.apply(msg[1])
+                    value = self.apply_action(msg[1])
+                    self.child_conn.send(value)
             else:
                 self.think()

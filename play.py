@@ -19,7 +19,7 @@ def main():
     parser.add_argument('-p1', '--player1',
                         choices=PLAYERS.keys(), default='human')
     parser.add_argument('-p2', '--player2',
-                        choices=PLAYERS.keys(), default='human')
+                        choices=PLAYERS.keys(), default='mcts')
     args = parser.parse_args()
     game = Game()
     players: List[Player] = [PLAYERS[p]()
@@ -30,9 +30,13 @@ def main():
         while not game.terminal():
             game.render()
             action = players[game.to_play()].select()
+            for i, player in enumerate(players):
+                value = player.apply(action)
+                if game.to_play() != i:
+                    value *= -1
+                print(f'p{i + 1}: {value:.2f}', end='  ')
             game.apply(action)
-            for player in players:
-                player.apply(action)
+            print()
         game.render()
         if game.terminal_value(0) > 0:
             print('game terminated and player 1 won')

@@ -7,8 +7,9 @@ class Human(Player):
     def start(self):
         self.game = Game()
 
-    def apply(self, action: int):
+    def apply(self, action: int) -> float:
         self.game.apply(action)
+        return 0.0
 
     def select(self) -> int:
         action = None
