@@ -15,7 +15,7 @@ class MctsPlayer(Player):
         self.root = Node()
 
     def think(self):
-        run_mcts(self.config, self.game, self.root, 1_000)
+        run_mcts(self.config, self.game, self.root, 10_000)
 
     def apply_action(self, action: int) -> float:
         if action in self.root.children:

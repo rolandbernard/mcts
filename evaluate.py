@@ -8,11 +8,13 @@ from game.player import Player
 from game.human import Human
 from game.random import Random
 from mcts.player import MctsPlayer
+from minimax.player import MinimaxPlayer
 
 PLAYERS = {
     'human': Human,
     'random': Random,
     'mcts': MctsPlayer,
+    'minimax': MinimaxPlayer,
 }
 
 
@@ -54,7 +56,7 @@ def main():
     parser = ArgumentParser(
         prog='evaluate.py', description='play a connect 4 tournament')
     parser.add_argument('players', choices=PLAYERS.keys(), nargs='+')
-    parser.add_argument('-t', '--time', type=int, default=5.0,
+    parser.add_argument('-t', '--time', type=float, default=5.0,
                         help='time limit for the non-human players')
     parser.add_argument('-r', '--render', action='store_true', default=False,
                         help='render the games played')
