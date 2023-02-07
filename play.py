@@ -1,16 +1,7 @@
 
 from argparse import ArgumentParser
-from typing import List
 
-from game.connect4 import Game
-from game.player import Player
-from game.human import Human
-from mcts.player import MctsPlayer
-
-PLAYERS = {
-    'human': Human,
-    'mcts': MctsPlayer,
-}
+from evaluate import run_match, PLAYERS
 
 
 def main():
@@ -20,34 +11,12 @@ def main():
                         choices=PLAYERS.keys(), default='human')
     parser.add_argument('-p2', '--player2',
                         choices=PLAYERS.keys(), default='mcts')
+    parser.add_argument('-t', '--time', type=int, default=5.0,
+                        help='time limit for the non-human players')
+    parser.add_argument('-r', '--render', action='store_true', default=False,
+                        help='render the games played')
     args = parser.parse_args()
-    game = Game()
-    players: List[Player] = [PLAYERS[p]()
-                             for p in (args.player1, args.player2)]
-    for player in players:
-        player.start()
-    try:
-        while not game.terminal():
-            game.render()
-            action = players[game.to_play()].select()
-            for i, player in enumerate(players):
-                value = player.apply(action)
-                if game.to_play() != i:
-                    value *= -1
-                print(f'p{i + 1}: {value:.2f}', end='  ')
-            game.apply(action)
-            print()
-        game.render()
-        if game.terminal_value(0) > 0:
-            print('game terminated and player 1 won')
-        elif game.terminal_value(1) > 0:
-            print('game terminated and player 2 won')
-        else:
-            print('game terminated in a draw')
-    except:
-        pass
-    for player in players:
-        player.terminate()
+    run_match(args.player1, args.player2, args.time, args.render)
 
 
 if __name__ == '__main__':

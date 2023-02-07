@@ -7,13 +7,15 @@ from game.connect4 import Game
 
 
 class Player(Process):
+    to_play: int
     game: Game
     parent_conn: Connection
     child_conn: Connection
 
-    def __init__(self):
+    def __init__(self, game: Game, to_play: int):
         super().__init__()
-        self.game = Game()
+        self.game = game.copy()
+        self.to_play = to_play
         self.parent_conn, self.child_conn = Pipe()
 
     def apply(self, action: int) -> float:
@@ -23,8 +25,8 @@ class Player(Process):
     def terminate(self):
         self.parent_conn.send(('terminate',))
 
-    def select(self) -> int:
-        sleep(5)
+    def select(self, time: float) -> int:
+        sleep(time)
         self.parent_conn.send(('select',))
         return self.parent_conn.recv()
 

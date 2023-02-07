@@ -1,20 +1,19 @@
 
 from game.player import Player
-from game.connect4 import Game
 
 
 class Human(Player):
     def start(self):
-        self.game = Game()
+        pass
 
     def apply(self, action: int) -> float:
         self.game.apply(action)
         return 0.0
 
-    def select(self) -> int:
+    def select(self, _: float) -> int:
         action = None
         legal_actions = self.game.legal_actions()
         while action not in legal_actions:
             action = int(
-                input(f'player {self.game.to_play() + 1} move? {legal_actions} '))
+                input(f'player {self.to_play + 1} move? {legal_actions} '))
         return action

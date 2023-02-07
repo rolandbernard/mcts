@@ -2,15 +2,15 @@
 from typing import List
 
 from mcts.mcts import MctsConfig, Node, run_mcts, select_action
-from game.player import Player
+from game.player import Player, Game
 
 
 class MctsPlayer(Player):
     config: MctsConfig
     root: Node
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, game: Game, to_play: int):
+        super().__init__(game, to_play)
         self.config = MctsConfig()
         self.root = Node()
 
