@@ -12,13 +12,13 @@ from game.connect4 import Game
 @dataclass
 class AZeroConfig:
     # self-play
-    concurrent: int = 512
-    simulations: int = 50
-    temp_exp_thr: int = 20
+    concurrent: int = 1024
+    simulations: int = 256
+    temp_exp_thr: int = 16
 
     # play
     play_batch: int = 128
-    virtual_loss: int = 10
+    virtual_loss: int = 8
 
     # mcts
     pucb_c: float = 1.25
@@ -28,10 +28,10 @@ class AZeroConfig:
     # train
     checkpoint_interval: int = 1_000
     window_size: int = 100_000
-    batch_size: int = 1_024
-    weight_decay: float = 1e-4
+    batch_size: int = 2_048
+    weight_decay: float = 0.0001
     momentum: float = 0.9
-    lr: float = 0.05
+    lr: float = 0.02
 
     game_dir: str = 'data/games'
     net_dir: str = 'data/nets'

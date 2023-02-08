@@ -39,11 +39,10 @@ def expand(node: Node, game: Game, prior: List[float]):
         node.children[action] = Node(prior[action], game.to_play())
 
 
-def backpropagate(path: List[Node], value: float, to_play: int, virtual_loss: int = 0):
+def backpropagate(path: List[Node], value: float, to_play: int):
     for node in path:
-        node.value_sum += (value if to_play ==
-                           node.to_play else -value) + virtual_loss
-        node.visit_count += 1 - virtual_loss
+        node.value_sum += (value if to_play == node.to_play else -value)
+        node.visit_count += 1
 
 
 def ucb_score(config: AZeroConfig, parent: Node, child: Node) -> float:
@@ -67,18 +66,20 @@ async def run_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node,
         search_game = game.copy()
         search_path = [root]
         node = root
-        node.visit_count += config.virtual_loss
-        node.value_sum -= config.virtual_loss
         while node.expanded():
             action, node = select_child(config, node)
-            node.visit_count += config.virtual_loss
-            node.value_sum -= config.virtual_loss
             search_game.apply(action)
             search_path.append(node)
-        value, prior = await net.evaluate(game_image(game))
-        expand(node, search_game, prior)
-        backpropagate(search_path, value, search_game.to_play(),
-                      config.virtual_loss)
+        if search_game.terminal():
+            value = search_game.terminal_value(search_game.to_play())
+        else:
+            value, prior = await net.evaluate(game_image(search_game))
+            expand(node, search_game, prior)
+        backpropagate(search_path, value, search_game.to_play())
+
+
+async def run_mcts_batch(config: AZeroConfig, net: NetManager, game: Game, root: Node):
+    raise NotImplementedError
 
 
 def add_exploration_noise(config: AZeroConfig, node: Node):
@@ -94,5 +95,5 @@ def select_action(node: Node, temp: float = 0) -> int:
     if temp == 0:
         return max(visit_counts)[1]
     else:
-        prop = [v**1 / temp for v, _ in visit_counts]
+        prop = [v**(1 / temp) for v, _ in visit_counts]
         return random.choices([a for _, a in visit_counts], weights=prop)[0]
