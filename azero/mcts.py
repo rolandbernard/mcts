@@ -58,9 +58,9 @@ def select_child(config: AZeroConfig, node: Node) -> Tuple[int, Node]:
     return max(node.children.items(), key=lambda x: ucb_score(config, node, x[1]))
 
 
-def run_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node, n: int):
+async def run_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node, n: int):
     if not root.expanded():
-        value, prior = net.evaluate(game_image(game))
+        value, prior = await net.evaluate(game_image(game))
         expand(root, game, prior)
     add_exploration_noise(config, root)
     for _ in range(n):
@@ -75,7 +75,7 @@ def run_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node, n: in
             node.value_sum -= config.virtual_loss
             search_game.apply(action)
             search_path.append(node)
-        value, prior = net.evaluate(game_image(game))
+        value, prior = await net.evaluate(game_image(game))
         expand(node, search_game, prior)
         backpropagate(search_path, value, search_game.to_play(),
                       config.virtual_loss)

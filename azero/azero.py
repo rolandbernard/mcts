@@ -11,18 +11,24 @@ from game.connect4 import Game
 
 @dataclass
 class AZeroConfig:
-    threads: int = 128
+    # self-play
+    concurrent: int = 512
     simulations: int = 50
     temp_exp_thr: int = 20
 
+    # play
+    play_batch: int = 128
+    virtual_loss: int = 10
+
+    # mcts
     pucb_c: float = 1.25
     dirichlet_noise: float = 0.25
     exp_frac: float = 0.25
-    virtual_loss: int = 10
 
+    # train
     checkpoint_interval: int = 1_000
     window_size: int = 100_000
-    batch_size: int = 1_000
+    batch_size: int = 1_024
     weight_decay: float = 1e-4
 
     game_dir: str = 'data/games'
@@ -99,7 +105,7 @@ class ReplayBuffer:
         if len(all_games) > self.window:
             all_games.sort()
             for game in all_games[:-self.window]:
-                os.remove(game)
+                os.remove(self.path + '/' + game)
             all_games = all_games[-self.window:]
         for _ in range(n):
             path = self.path + '/' + \

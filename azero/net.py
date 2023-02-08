@@ -2,8 +2,7 @@
 import os
 import torch
 from torch import nn
-from threading import Event, Thread
-from concurrent.futures import Future
+from asyncio import Future, Event
 from typing import List, Tuple
 
 from game.connect4 import Game
@@ -91,37 +90,44 @@ class NetStorage:
         return self.net
 
 
-class NetManager(Thread):
+class NetManager:
     nets: NetStorage
     queue: List[Tuple[torch.Tensor, Future]]
     queue_full: Event
+    min_size: int
 
-    def __init__(self, config: AZeroConfig):
+    def __init__(self, config: AZeroConfig, min_size: int = 128):
         super().__init__()
         self.nets = NetStorage(config)
         self.queue = []
         self.queue_full = Event()
+        self.min_size = min_size
 
-    def run(self):
+    async def run(self):
         while True:
-            self.queue_full.wait()
+            await self.queue_full.wait()
             self.queue_full.clear()
-            queue, self.queue = self.queue, []
-            if queue:
-                net = self.nets.latest_network()
-                inputs = torch.stack([image for image, _ in queue])
-                value, policy = net.forward(inputs)
-                for i, (_, f) in enumerate(queue):
-                    f.set_result((value[i], policy[i]))
+            if len(self.queue) >= self.min_size:
+                self.evaluate_queue()
 
-    def enqueue_task(self, image: torch.Tensor) -> Future[Tuple[torch.Tensor, torch.Tensor]]:
+    def evaluate_queue(self):
+        queue, self.queue = self.queue, []
+        if queue:
+            net = self.nets.latest_network()
+            inputs = torch.stack([image for image, _ in queue])
+            value, policy = net.forward(inputs)
+            for i, (_, f) in enumerate(queue):
+                f.set_result((value[i], policy[i]))
+
+    def enqueue(self, image: torch.Tensor) -> Future[Tuple[torch.Tensor, torch.Tensor]]:
         future = Future()
         self.queue.append((image, future))
-        self.queue_full.set()
+        if len(self.queue) >= self.min_size:
+            self.queue_full.set()
         return future
 
-    def evaluate(self, image: torch.Tensor) -> Tuple[float, List[float]]:
-        value, policy_logits = self.enqueue_task(image).result()
+    async def evaluate(self, image: torch.Tensor) -> Tuple[float, List[float]]:
+        value, policy_logits = await self.enqueue(image)
         policy = torch.exp(policy_logits)
         policy_sum = torch.sum(policy)
         return (float(value), (policy / policy_sum).tolist())
