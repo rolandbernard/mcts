@@ -10,8 +10,8 @@ def train(config: AZeroConfig):
     nets = NetStorage(config)
     net = nets.latest_network()
     net.train()
-    optimizer = torch.optim.Adam(
-        net.parameters(), weight_decay=config.weight_decay)
+    optimizer = torch.optim.SGD(net.parameters(), lr=config.lr,
+                                weight_decay=config.weight_decay, momentum=config.momentum)
     loss_policy = torch.nn.CrossEntropyLoss()
     loss_value = torch.nn.MSELoss()
     step = nets.step

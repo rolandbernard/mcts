@@ -30,6 +30,8 @@ class AZeroConfig:
     window_size: int = 100_000
     batch_size: int = 1_024
     weight_decay: float = 1e-4
+    momentum: float = 0.9
+    lr: float = 0.05
 
     game_dir: str = 'data/games'
     net_dir: str = 'data/nets'
@@ -108,9 +110,14 @@ class ReplayBuffer:
                 os.remove(self.path + '/' + game)
             all_games = all_games[-self.window:]
         for _ in range(n):
-            path = self.path + '/' + \
-                all_games[random.randint(0, len(all_games) - 1)]
-            obj = torch.load(path)
+            obj = None
+            while obj is None:
+                path = self.path + '/' + \
+                    all_games[random.randint(0, len(all_games) - 1)]
+                try:
+                    obj = torch.load(path)
+                except:
+                    os.remove(path)
             game = TracedGame()
             game.load(obj['history'], obj['policy'])
             games.append(game)
