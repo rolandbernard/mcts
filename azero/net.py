@@ -103,9 +103,9 @@ class NetManager:
     queue_full: Event
     min_size: int
 
-    def __init__(self, config: AZeroConfig, min_size: int = 1):
+    def __init__(self, config: AZeroConfig, min_size: int = 1, max_step: Union[None, int] = None):
         super().__init__()
-        self.nets = NetStorage(config)
+        self.nets = NetStorage(config, max_step)
         self.queue = []
         self.queue_full = Event()
         self.min_size = min_size

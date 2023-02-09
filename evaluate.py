@@ -10,13 +10,15 @@ from game.random import Random
 from mcts.player import MctsPlayer
 from minimax.player import MinimaxPlayer
 from minimax.player2 import Minimax2Player
+from azero.player import AZeroPlayer
 
 PLAYERS = {
     'human': Human,
     'random': Random,
-    'mcts': MctsPlayer,
     'minimax': MinimaxPlayer,
     'minimax2': Minimax2Player,
+    'mcts': MctsPlayer,
+    'azero': AZeroPlayer,
 }
 
 
