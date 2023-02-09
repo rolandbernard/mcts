@@ -9,12 +9,14 @@ from game.human import Human
 from game.random import Random
 from mcts.player import MctsPlayer
 from minimax.player import MinimaxPlayer
+from minimax.player2 import Minimax2Player
 
 PLAYERS = {
     'human': Human,
     'random': Random,
     'mcts': MctsPlayer,
     'minimax': MinimaxPlayer,
+    'minimax2': Minimax2Player,
 }
 
 
@@ -55,7 +57,7 @@ def run_match(p1: str, p2: str, time: float, render: bool) -> Tuple[float, float
 def main():
     parser = ArgumentParser(
         prog='evaluate.py', description='play a connect 4 tournament')
-    parser.add_argument('players', choices=PLAYERS.keys(), nargs='+')
+    parser.add_argument('players', choices=PLAYERS.keys(), nargs='*')
     parser.add_argument('-t', '--time', type=float, default=5.0,
                         help='time limit for the non-human players')
     parser.add_argument('-r', '--render', action='store_true', default=False,
@@ -63,14 +65,17 @@ def main():
     parser.add_argument('-l', '--log', type=str, default=None,
                         help='log game results to the given file')
     args = parser.parse_args()
+    if not args.players:
+        args.players = list(PLAYERS.keys())
     while True:
         p1 = random.choice(args.players)
         p2 = random.choice(args.players)
+        print(f'{p1} {p2} ', end='')
         (r1, r2) = run_match(p1, p2, args.time, args.render)
         if args.log is not None:
             with open(args.log, 'a') as log:
                 log.write(f'{p1} {p2} {r1} {r2}\n')
-        print(f'{p1} {p2} {r1} {r2}')
+        print(f'{r1} {r2}')
 
 
 if __name__ == '__main__':
