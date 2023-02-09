@@ -26,7 +26,7 @@ async def self_play_thread(config: AZeroConfig, net: NetManager):
 
 
 async def self_play(config: AZeroConfig):
-    nets = NetManager(config)
+    nets = NetManager(config, config.concurrent // 4)
     await asyncio.gather(
         nets.run(),
         *[self_play_thread(config, nets) for _ in range(config.concurrent)]

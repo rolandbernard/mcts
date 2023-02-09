@@ -17,7 +17,7 @@ class AZeroConfig:
     temp_exp_thr: int = 16
 
     # play
-    play_batch: int = 128
+    play_batch: int = 32
     virtual_loss: int = 8
 
     # mcts
@@ -112,12 +112,13 @@ class ReplayBuffer:
         for _ in range(n):
             obj = None
             while obj is None:
-                path = self.path + '/' + \
-                    all_games[random.randint(0, len(all_games) - 1)]
+                idx = random.randint(0, len(all_games) - 1)
+                path = self.path + '/' + all_games[idx]
                 try:
                     obj = torch.load(path)
                 except:
-                    os.remove(path)
+                    if len(all_games) - idx >= 128:
+                        os.remove(path)
             game = TracedGame()
             game.load(obj['history'], obj['policy'])
             games.append(game)

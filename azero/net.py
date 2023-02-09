@@ -3,7 +3,7 @@ import os
 import torch
 from torch import nn
 from asyncio import Future, Event
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from game.connect4 import Game
 from azero.azero import AZeroConfig
@@ -63,10 +63,12 @@ class NetStorage:
     path: str
     net: Net
     step: int
+    max_step: Union[None, int]
 
-    def __init__(self, config: AZeroConfig):
+    def __init__(self, config: AZeroConfig, max_step: Union[None, int] = None):
         self.path = config.net_dir
         self.step = 0
+        self.max_step = max_step
         self.net = Net()
         self.update_network()
 
@@ -79,6 +81,8 @@ class NetStorage:
 
     def update_network(self):
         latest = max((int(n) for n in os.listdir(self.path)), default=0)
+        if self.max_step is not None and self.max_step < latest:
+            latest = self.max_step
         if latest > self.step:
             try:
                 checkpoint = torch.load(self.path + f'/{latest}')
@@ -99,7 +103,7 @@ class NetManager:
     queue_full: Event
     min_size: int
 
-    def __init__(self, config: AZeroConfig, min_size: int = 128):
+    def __init__(self, config: AZeroConfig, min_size: int = 1):
         super().__init__()
         self.nets = NetStorage(config)
         self.queue = []
