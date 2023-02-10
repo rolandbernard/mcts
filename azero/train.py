@@ -10,11 +10,14 @@ def train(config: AZeroConfig):
     nets = NetStorage(config)
     net = nets.latest_network()
     net.train()
+    step = nets.step
     optimizer = torch.optim.SGD(net.parameters(), lr=config.lr,
                                 weight_decay=config.weight_decay, momentum=config.momentum)
+    optimizer.param_groups[0]['initial_lr'] = config.lr
+    lr_schedule = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=config.lr_step, gamma=config.lr_decay, last_epoch=step - 1)
     loss_policy = torch.nn.CrossEntropyLoss()
     loss_value = torch.nn.MSELoss()
-    step = nets.step
     while True:
         sum_loss = 0
         for _ in range(config.checkpoint_interval):
@@ -25,6 +28,7 @@ def train(config: AZeroConfig):
                 loss_policy(pred_policy_logits, policy.to(net.device))
             loss.backward()
             optimizer.step()
+            lr_schedule.step()
             sum_loss += loss.item()
             step += 1
             if step % 100 == 0:

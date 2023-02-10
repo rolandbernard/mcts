@@ -4,7 +4,7 @@ import torch
 import random
 from datetime import datetime
 from dataclasses import dataclass
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 from game.connect4 import Game
 
@@ -14,7 +14,7 @@ class AZeroConfig:
     # self-play
     concurrent: int = 1024
     simulations: int = 256
-    temp_exp_thr: int = 16
+    temp_exp_thr: int = 32
 
     # play
     play_batch: int = 32
@@ -32,6 +32,8 @@ class AZeroConfig:
     weight_decay: float = 0.0001
     momentum: float = 0.9
     lr: float = 0.02
+    lr_step: int = 100_000
+    lr_decay: float = 0.1
 
     game_dir: str = 'data/games'
     net_dir: str = 'data/nets'
