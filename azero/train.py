@@ -14,8 +14,8 @@ def train(config: AZeroConfig):
     optimizer = torch.optim.SGD(net.parameters(), lr=config.lr,
                                 weight_decay=config.weight_decay, momentum=config.momentum)
     optimizer.param_groups[0]['initial_lr'] = config.lr
-    lr_schedule = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=config.lr_step, gamma=config.lr_decay, last_epoch=step - 1)
+    lr_schedule = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer, milestones=config.lr_step, gamma=config.lr_decay, last_epoch=step - 1)
     loss_policy = torch.nn.CrossEntropyLoss()
     loss_value = torch.nn.MSELoss()
     while True:
