@@ -1,7 +1,6 @@
 
 import math
 import random
-from typing import List, Dict, Tuple
 from dataclasses import dataclass
 
 from game.connect4 import Game
@@ -17,7 +16,7 @@ class Node:
     visit_count: int
     value_sum: float
     to_play: int
-    children: Dict[int, 'Node']
+    children: dict[int, 'Node']
 
     def __init__(self, to_play: int = -1):
         self.visit_count = 0
@@ -47,7 +46,7 @@ def rollout(game: Game, to_play: int) -> int:
     return game.terminal_value(to_play)
 
 
-def backpropagate(path: List[Node], value: int, to_play: int):
+def backpropagate(path: list[Node], value: int, to_play: int):
     for node in path:
         node.value_sum += value if to_play == node.to_play else -value
         node.visit_count += 1
@@ -60,7 +59,7 @@ def ucb_score(config: MctsConfig, parent: Node, child: Node) -> float:
     return prior_score + value_score
 
 
-def select_child(config: MctsConfig, node: Node) -> Tuple[int, Node]:
+def select_child(config: MctsConfig, node: Node) -> tuple[int, Node]:
     return max(node.children.items(), key=lambda x: ucb_score(config, node, x[1]))
 
 

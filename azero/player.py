@@ -1,6 +1,5 @@
 
 import asyncio
-from typing import List, Union
 
 from game.player import Player, Game
 from azero.azero import AZeroConfig
@@ -13,7 +12,7 @@ class AZeroPlayer(Player):
     nets:  NetManager
     root: Node
 
-    def __init__(self, game: Game, to_play: int, max_step: Union[None, int] = None):
+    def __init__(self, game: Game, to_play: int, max_step: None | int = None):
         super().__init__(game, to_play)
         self.config = AZeroConfig()
         self.nets = NetManager(self.config, max_step=max_step)
@@ -35,7 +34,7 @@ class AZeroPlayer(Player):
             self.root = Node()
         return self.root.value()
 
-    def policy(self) -> List[float]:
+    def policy(self) -> list[float]:
         assert self.game is not None
         dict = {a: n.visit_count for a,
                 n in self.root.children.items()}

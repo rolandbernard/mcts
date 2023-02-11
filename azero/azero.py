@@ -4,7 +4,6 @@ import torch
 import random
 from datetime import datetime
 from dataclasses import dataclass
-from typing import Tuple, List
 
 from game.connect4 import Game
 
@@ -32,7 +31,7 @@ class AZeroConfig:
     weight_decay: float = 0.0001
     momentum: float = 0.9
     lr: float = 0.02
-    lr_step: List[int] = [100_000, 150_000]
+    lr_step: tuple[int, ...] = (100_000, 150_000)
     lr_decay: float = 0.1
 
     game_dir: str = 'data/games'
@@ -50,15 +49,15 @@ def game_image(game: Game) -> torch.Tensor:
 
 
 class TracedGame(Game):
-    history: List[int]
-    policy: List[List[float]]
+    history: list[int]
+    policy: list[list[float]]
 
     def __init__(self):
         super().__init__()
         self.history = []
         self.policy = []
 
-    def load(self, history: List[int], policy: List[List[float]]):
+    def load(self, history: list[int], policy: list[list[float]]):
         self.policy = policy
         for action in history:
             self.apply(action)
@@ -84,7 +83,7 @@ class TracedGame(Game):
     def make_image(self, index: int) -> torch.Tensor:
         return game_image(self.replay_to(index))
 
-    def make_target(self, index: int) -> Tuple[float, List[float]]:
+    def make_target(self, index: int) -> tuple[float, list[float]]:
         value = self.terminal_value(index % 2)
         return (value, self.policy[index])
 
@@ -103,7 +102,7 @@ class ReplayBuffer:
         torch.save({'history': game.history, 'policy': game.policy},
                    self.path + f'/{timestamp}-{random.randint(0, 1 << 32)}')
 
-    def load_games(self, n: int) -> List[TracedGame]:
+    def load_games(self, n: int) -> list[TracedGame]:
         games = []
         all_games = os.listdir(self.path)
         if len(all_games) > self.window:
@@ -126,7 +125,7 @@ class ReplayBuffer:
             games.append(game)
         return games
 
-    def combine_data(self, games: List[TracedGame]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def combine_data(self, games: list[TracedGame]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         images = []
         target_values = []
         target_policy = []

@@ -3,7 +3,6 @@ import os
 import torch
 from torch import nn
 from asyncio import Future, Event
-from typing import List, Tuple, Union
 
 from game.connect4 import Game
 from azero.azero import AZeroConfig
@@ -54,7 +53,7 @@ class Net(nn.Module):
         )
         self.to(self.device)
 
-    def forward(self, inputs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, inputs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         common = self.common(inputs.to(self.device))
         return (self.value(common), self.policy(common))
 
@@ -63,9 +62,9 @@ class NetStorage:
     path: str
     net: Net
     step: int
-    max_step: Union[None, int]
+    max_step: None | int
 
-    def __init__(self, config: AZeroConfig, max_step: Union[None, int] = None):
+    def __init__(self, config: AZeroConfig, max_step: None | int = None):
         self.path = config.net_dir
         self.step = 0
         self.max_step = max_step
@@ -99,11 +98,11 @@ class NetStorage:
 
 class NetManager:
     nets: NetStorage
-    queue: List[Tuple[torch.Tensor, Future]]
+    queue: list[tuple[torch.Tensor, Future]]
     queue_full: Event
     min_size: int
 
-    def __init__(self, config: AZeroConfig, min_size: int = 1, max_step: Union[None, int] = None):
+    def __init__(self, config: AZeroConfig, min_size: int = 1, max_step: None | int = None):
         super().__init__()
         self.nets = NetStorage(config, max_step)
         self.queue = []
@@ -126,14 +125,14 @@ class NetManager:
             for i, (_, f) in enumerate(queue):
                 f.set_result((value[i], policy[i]))
 
-    def enqueue(self, image: torch.Tensor) -> Future[Tuple[torch.Tensor, torch.Tensor]]:
+    def enqueue(self, image: torch.Tensor) -> Future[tuple[torch.Tensor, torch.Tensor]]:
         future = Future()
         self.queue.append((image, future))
         if len(self.queue) >= self.min_size:
             self.queue_full.set()
         return future
 
-    async def evaluate(self, image: torch.Tensor) -> Tuple[float, List[float]]:
+    async def evaluate(self, image: torch.Tensor) -> tuple[float, list[float]]:
         value, policy_logits = await self.enqueue(image)
         policy = torch.exp(policy_logits)
         policy_sum = torch.sum(policy)

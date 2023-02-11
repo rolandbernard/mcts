@@ -1,7 +1,6 @@
 
 import random
 from signal import pause
-from typing import Dict
 
 from game.player import Player, Game
 
@@ -10,7 +9,7 @@ class Node:
     result: int
     value: float
     depth: int
-    children: Dict[int, 'Node']
+    children: dict[int, 'Node']
 
     def __init__(self):
         self.children = {}

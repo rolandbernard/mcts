@@ -1,7 +1,6 @@
 
 import random
 from signal import pause
-from typing import List
 
 from game.player import Player, Game
 
@@ -38,8 +37,8 @@ def evaluate_action(game: Game, action: int, depth: int) -> float:
 
 
 class MinimaxPlayer(Player):
-    depth: List[int]
-    value: List[float]
+    depth: list[int]
+    value: list[float]
 
     def __init__(self, game: Game, to_play: int):
         super().__init__(game, to_play)

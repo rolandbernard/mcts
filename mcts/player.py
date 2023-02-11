@@ -1,5 +1,4 @@
 
-from typing import List
 
 from mcts.mcts import MctsConfig, Node, run_mcts, select_action
 from game.player import Player, Game
@@ -24,7 +23,7 @@ class MctsPlayer(Player):
             self.root = Node()
         return self.root.value()
 
-    def policy(self) -> List[float]:
+    def policy(self) -> list[float]:
         assert self.game is not None
         dict = {a: n.visit_count for a,
                 n in self.root.children.items()}

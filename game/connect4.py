@@ -1,5 +1,5 @@
 
-from typing import List, Union
+from typing import Union
 
 
 class Game:
@@ -32,10 +32,10 @@ class Game:
     def terminal_value(self, to_play: int) -> int:
         return self.value if to_play == self.to_play() else -self.value
 
-    def all_actions(self) -> List[int]:
+    def all_actions(self) -> list[int]:
         return list(range(Game.WIDTH))
 
-    def legal_actions(self) -> List[int]:
+    def legal_actions(self) -> list[int]:
         if self.value != 0:
             return []
         else:
@@ -66,13 +66,13 @@ class Game:
     def to_play(self) -> int:
         return (self.other.bit_count() + self.current.bit_count()) % 2
 
-    def get(self, other: Union[bool, int], col: int, row: int) -> int:
+    def get(self, other: bool | int, col: int, row: int) -> int:
         if other:
             return (self.other >> (col * (Game.HEIGHT + 1) + row)) & 1
         else:
             return (self.current >> (col * (Game.HEIGHT + 1) + row)) & 1
 
-    def render(self, suggestions: Union[None, List[float]] = None):
+    def render(self, suggestions: None | list[float] = None):
         to_play = 1 if self.to_play() == 0 else -1
         for row in reversed(range(Game.HEIGHT)):
             print('|', end='')

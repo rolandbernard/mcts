@@ -4,7 +4,6 @@ import random
 import numpy as np
 import asyncio
 from asyncio import Future
-from typing import List, Dict, Any, Tuple, Union
 
 from game.connect4 import Game
 from azero.azero import AZeroConfig, game_image
@@ -16,7 +15,7 @@ class Node:
     visit_count: int
     value_sum: float
     to_play: int
-    children: Dict[int, 'Node']
+    children: dict[int, 'Node']
 
     def __init__(self, prior: float = 1, to_play: int = -1):
         self.prior = prior
@@ -28,7 +27,7 @@ class Node:
     def expanded(self) -> bool:
         return len(self.children) > 0
 
-    def value(self, virtual_loss: Union[None, Dict[Any, float]] = None) -> float:
+    def value(self, virtual_loss: None | dict['Node', float] = None) -> float:
         if virtual_loss is not None and self in virtual_loss:
             virt_loss = virtual_loss[self]
             return (self.value_sum - virt_loss) / (self.visit_count + virt_loss)
@@ -38,19 +37,19 @@ class Node:
             return 0
 
 
-def expand(node: Node, game: Game, prior: List[float]):
+def expand(node: Node, game: Game, prior: list[float]):
     actions = game.legal_actions()
     for action in actions:
         node.children[action] = Node(prior[action], game.to_play())
 
 
-def backpropagate(path: List[Node], value: float, to_play: int):
+def backpropagate(path: list[Node], value: float, to_play: int):
     for node in path:
         node.value_sum += (value if to_play == node.to_play else -value)
         node.visit_count += 1
 
 
-def ucb_score(config: AZeroConfig, parent: Node, child: Node, virtual_loss: Union[None, Dict[Any, float]] = None) -> float:
+def ucb_score(config: AZeroConfig, parent: Node, child: Node, virtual_loss: None | dict[Node, float] = None) -> float:
     parent_count = parent.visit_count
     child_count = child.visit_count
     if virtual_loss is not None:
@@ -64,7 +63,7 @@ def ucb_score(config: AZeroConfig, parent: Node, child: Node, virtual_loss: Unio
     return prior_score + value_score
 
 
-def select_child(config: AZeroConfig, node: Node, virtual_loss: Union[None, Dict[Any, float]] = None) -> Tuple[int, Node]:
+def select_child(config: AZeroConfig, node: Node, virtual_loss: None | dict[Node, float] = None) -> tuple[int, Node]:
     return max(node.children.items(), key=lambda x: ucb_score(config, node, x[1], virtual_loss))
 
 
@@ -90,10 +89,10 @@ async def run_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node,
 
 
 async def run_mcts_batch(config: AZeroConfig, net: NetManager, game: Game, root: Node):
-    virtual_loss: Dict[Node, float] = {}
-    search_paths: List[List[Node]] = []
-    search_games: List[Game] = []
-    results: List = []
+    virtual_loss: dict[Node, float] = {}
+    search_paths: list[list[Node]] = []
+    search_games: list[Game] = []
+    results: list = []
     for _ in range(config.play_batch):
         search_game = game.copy()
         search_path = [root]
