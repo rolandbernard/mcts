@@ -1,11 +1,11 @@
 
+import math
 import torch
 from argparse import ArgumentParser
-from typing import List, Dict
 from collections import defaultdict
 
 
-def print_matrix(name: str, players: List[str], scores: Dict[str, Dict[str, float]]):
+def print_matrix(name: str, players: list[str], scores: dict[str, dict[str, float]]):
     print(name.ljust(8), end='')
     for p1 in players:
         print(p1.rjust(8), end='')
@@ -30,7 +30,7 @@ def main():
                         nargs='+', help='fix the score for a given player')
     args = parser.parse_args()
     fix = {v.split('=')[0].strip(): int(v.split('=')[1]) for v in args.fix}
-    scores: Dict[str, Dict[str, List[float]]] = defaultdict(
+    scores: dict[str, dict[str, list[float]]] = defaultdict(
         lambda: defaultdict(lambda: [0, 0]))
     data = []
     if args.log is not None:
@@ -42,42 +42,38 @@ def main():
                 scores[p2][p1][0] += float(r2)
                 scores[p2][p1][1] += 1
                 data.append([p1, p2, float(r1)])
-                data.append([p2, p1, float(r2)])
     players = list(scores.keys())
     player_idx = {p: i for i, p in enumerate(players)}
-    num = torch.zeros((len(data), len(players)))
-    den = torch.zeros((len(data), len(players)))
-    res = torch.zeros((len(data), 1))
+    coef = torch.zeros((len(data), len(players)))
+    y = torch.zeros((len(data), 1))
     for i, (p1, p2, e) in enumerate(data):
-        num[i, player_idx[p1]] = 1
-        den[i, player_idx[p1]] = 1
-        den[i, player_idx[p2]] = 1
-        res[i] = e
+        coef[i, player_idx[p1]] = 1
+        coef[i, player_idx[p2]] = -1
+        y[i] = e
     fixed = torch.tensor([[fix[p] if p in fix else 0] for p in players])
     mask = torch.tensor([[0 if p in fix else 1] for p in players])
-    scale = torch.tensor(args.scale, requires_grad=len(fix) >= 2)
+    scale = torch.tensor(math.log(3) / args.scale, requires_grad=len(fix) >= 2)
     x = torch.ones((len(players), 1), requires_grad=True)
-    for lr in [1, 0.1, 0.01]:
-        optim = torch.optim.Adam([x, scale], lr)
-        for i in range(25_000):
-            optim.zero_grad()
-            score = 10**(fixed / (2 * scale)) + mask * torch.abs(x)
-            pred = (num @ score) / (den @ score)
-            loss = torch.nn.functional.mse_loss(pred, res)
-            loss.backward()
-            optim.step()
-    score = 10**(fixed / 2 / scale) + mask * torch.abs(x)
+    optim = torch.optim.Adam([x, scale])
+    for i in range(25_000):
+        optim.zero_grad()
+        score = fixed + mask * x
+        pred = scale * (coef @ score)
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(pred, y)
+        loss.backward()
+        optim.step()
+    score = fixed + mask * x
+    if not fix:
+        score += args.average - torch.mean(score)
     players.sort(key=lambda x: -float(score[player_idx[x]]))
     print_matrix('target', players, {
                  p1: {p2: v / c for p2, (v, c) in sc.items()} for p1, sc in scores.items()})
     print()
-    print_matrix('pred', players, {p1: {p2: float(score[player_idx[p1], 0] / (
-        score[player_idx[p1], 0] + score[player_idx[p2], 0])) for p2 in players} for p1 in players})
+    print_matrix('pred', players, {p1: {p2: float(
+        1 / (1 + math.exp(score[player_idx[p2], 0] - score[player_idx[p1]]))) for p2 in players} for p1 in players})
     print()
-    elo = 2 * scale * torch.log10(score)
     for p in players:
-        i = player_idx[p]
-        print(f'{p}: {round(float(elo[i]))} ({float(score[i]):.5f})')
+        print(f'{p}: {round(float(score[player_idx[p]]))}')
 
 
 if __name__ == '__main__':

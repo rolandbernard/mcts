@@ -1,7 +1,6 @@
 
 import random
 from argparse import ArgumentParser
-from typing import Tuple, List
 
 from game.connect4 import Game
 from game.player import Player
@@ -22,9 +21,9 @@ PLAYERS = {
 }
 
 
-def run_match(p1: str, p2: str, time: float, render: bool) -> Tuple[float, float]:
+def run_match(p1: str, p2: str, time: float, render: bool) -> tuple[float, float]:
     game = Game()
-    players: List[Player] = [PLAYERS[p1](game, 0), PLAYERS[p2](game, 1)]
+    players: list[Player] = [PLAYERS[p1](game, 0), PLAYERS[p2](game, 1)]
     for player in players:
         player.start()
     try:
@@ -69,9 +68,11 @@ def main():
     args = parser.parse_args()
     if not args.players:
         args.players = list(PLAYERS.keys())
+    if len(args.players) < 2:
+        print('need at least two players to run a tournament')
+        exit(1)
     while True:
-        p1 = random.choice(args.players)
-        p2 = random.choice(args.players)
+        p1, p2 = random.sample(args.players, 2)
         print(f'{p1} {p2} ', end='')
         (r1, r2) = run_match(p1, p2, args.time, args.render)
         if args.log is not None:
