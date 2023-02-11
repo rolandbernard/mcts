@@ -48,7 +48,7 @@ class MinimaxPlayer(Player):
     def think(self):
         to_expand = [i for i in self.game.legal_actions()
                      if abs(self.value[i]) < 1]
-        if to_expand:
+        if to_expand and self.game.to_play() == self.to_play:
             action = min(to_expand, key=lambda x: (
                 self.depth[x], -self.value[x]))
             self.value[action] = evaluate_action(

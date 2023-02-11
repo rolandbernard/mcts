@@ -78,10 +78,14 @@ class NetStorage:
             'net': net.state_dict(),
         }, self.path + f'/{step}')
 
+    def available_networks(self) -> list[int]:
+        return [
+            int(n) for n in os.listdir(self.path)
+            if self.max_step is None or int(n) <= self.max_step
+        ]
+
     def update_network(self):
-        latest = max((int(n) for n in os.listdir(self.path)), default=0)
-        if self.max_step is not None and self.max_step < latest:
-            latest = self.max_step
+        latest = max(self.available_networks(), default=0)
         if latest > self.step:
             try:
                 checkpoint = torch.load(self.path + f'/{latest}')

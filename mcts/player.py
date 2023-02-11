@@ -7,11 +7,13 @@ from game.player import Player, Game
 class MctsPlayer(Player):
     config: MctsConfig
     root: Node
+    temp: float
 
-    def __init__(self, game: Game, to_play: int):
+    def __init__(self, game: Game, to_play: int, temp: float = 0.0):
         super().__init__(game, to_play)
         self.config = MctsConfig()
         self.root = Node()
+        self.temp = temp
 
     def think(self):
         run_mcts(self.config, self.game, self.root, 10_000)
@@ -23,11 +25,5 @@ class MctsPlayer(Player):
             self.root = Node()
         return self.root.value()
 
-    def policy(self) -> list[float]:
-        assert self.game is not None
-        dict = {a: n.visit_count for a,
-                n in self.root.children.items()}
-        return [dict[a] if a in dict else 0 for a in self.game.all_actions()]
-
     def select_action(self) -> int:
-        return select_action(self.root)
+        return select_action(self.root, self.temp)

@@ -37,8 +37,11 @@ class Player(Process):
     def terminate(self):
         self.send(('terminate',))
 
-    def select(self, time: float) -> int:
+    def sleep(self, time: float):
         sleep(time)
+
+    def select(self, time: float) -> int:
+        self.sleep(time)
         self.send(('select',))
         return self.parent_conn.recv()
 

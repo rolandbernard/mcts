@@ -9,7 +9,7 @@ from game.random import Random
 from mcts.player import MctsPlayer
 from minimax.player import MinimaxPlayer
 from minimax.player2 import Minimax2Player
-from azero.player import AZeroPlayer
+from azero.player import AZeroPlayer, PolicyNnPlayer, ValueNnPlayer, available_nets
 
 PLAYERS = {
     'human': Human,
@@ -17,8 +17,25 @@ PLAYERS = {
     'minimax': MinimaxPlayer,
     'minimax2': Minimax2Player,
     'mcts': MctsPlayer,
+    'mcts-t1': lambda game, to_play: MctsPlayer(game, to_play, temp=1),
     'azero': AZeroPlayer,
+    'azero-t1': lambda game, to_play: AZeroPlayer(game, to_play, temp=1),
+    'policynn': PolicyNnPlayer,
+    'policynn-t1': lambda game, to_play: PolicyNnPlayer(game, to_play, temp=1),
+    'valuenn': ValueNnPlayer,
 }
+
+for net in available_nets():
+    PLAYERS[f'azero{net}'] = lambda game, to_play: AZeroPlayer(
+        game, to_play, net)
+    PLAYERS[f'azero{net}-t1'] = lambda game, to_play: AZeroPlayer(
+        game, to_play, net, temp=1)
+    PLAYERS[f'policynn{net}'] = lambda game, to_play: PolicyNnPlayer(
+        game, to_play, net)
+    PLAYERS[f'policynn{net}-t1'] = lambda game, to_play: PolicyNnPlayer(
+        game, to_play, net, temp=1)
+    PLAYERS[f'valuenn{net}'] = lambda game, to_play: ValueNnPlayer(
+        game, to_play, net)
 
 
 def run_match(p1: str, p2: str, time: float, render: bool) -> tuple[float, float]:
@@ -58,7 +75,8 @@ def run_match(p1: str, p2: str, time: float, render: bool) -> tuple[float, float
 def main():
     parser = ArgumentParser(
         prog='evaluate.py', description='play a connect 4 tournament')
-    parser.add_argument('players', choices=PLAYERS.keys(), nargs='*')
+    parser.add_argument('players', metavar="PLAYER", choices=PLAYERS.keys(), nargs='*',
+                        help='{human,random,minimax,minimax2,mcts,mcts-t1,azero,azero-t1,policynn,policynn-t1,valuenn}')
     parser.add_argument('-t', '--time', type=float, default=5.0,
                         help='time limit for the non-human players')
     parser.add_argument('-r', '--render', action='store_true', default=False,

@@ -138,10 +138,14 @@ def add_exploration_noise(config: AZeroConfig, node: Node):
         node.children[a].prior = node.children[a].prior * (1 - frac) + n * frac
 
 
-def select_action(node: Node, temp: float = 0) -> int:
-    visit_counts = [(n.visit_count, a) for a, n in node.children.items()]
+def select_action_policy(policy: dict[int, float], temp: float = 0) -> int:
     if temp == 0:
-        return max(visit_counts)[1]
+        return max(policy.keys(), key=lambda a: policy[a])
     else:
-        prop = [v**(1 / temp) for v, _ in visit_counts]
-        return random.choices([a for _, a in visit_counts], weights=prop)[0]
+        prop = [v**(1 / temp) for v in policy.values()]
+        return random.choices(list(policy.keys()), weights=prop)[0]
+
+
+def select_action(node: Node, temp: float = 0) -> int:
+    visit_counts = {a: float(n.visit_count) for a, n in node.children.items()}
+    return select_action_policy(visit_counts, temp)

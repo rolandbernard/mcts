@@ -1,16 +1,20 @@
 
 import random
+from signal import pause
 
 from game.player import Player
 
 
 class Random(Player):
-    def start(self):
+    def sleep(self, time: float):
         pass
 
-    def apply(self, action: int) -> float:
+    def think(self):
+        pause()
+
+    def apply_action(self, action: int) -> float:
         self.game.apply(action)
         return 0.0
 
-    def select(self, _: float) -> int:
+    def select_action(self) -> int:
         return random.choice(self.game.legal_actions())
