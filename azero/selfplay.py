@@ -25,13 +25,9 @@ async def self_play_thread(config: AZeroConfig, net: NetManager):
         replay_buffer.save_game(game)
 
 
-async def self_play(config: AZeroConfig):
-    nets = NetManager(config, config.concurrent // 4)
-    await asyncio.gather(
-        nets.run(),
-        *[self_play_thread(config, nets) for _ in range(config.concurrent)]
-    )
-
-
 if __name__ == '__main__':
-    asyncio.run(self_play(AZeroConfig()))
+    config = AZeroConfig()
+    nets = NetManager(config, config.concurrent // 4)
+    for i in range(config.concurrent):
+        nets.loop.create_task(self_play_thread(config, nets))
+    nets.loop.run_forever()

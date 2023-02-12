@@ -65,15 +65,15 @@ def main():
     score = fixed + mask * x
     if not fix:
         score += args.average - torch.mean(score)
-    players.sort(key=lambda x: -float(score[player_idx[x]]))
+    players.sort(key=lambda x: -score[player_idx[x]].item())
     print_matrix('target', players, {
                  p1: {p2: v / c for p2, (v, c) in sc.items()} for p1, sc in scores.items()})
     print()
-    print_matrix('pred', players, {p1: {p2: float(
-        1 / (1 + math.exp(score[player_idx[p2], 0] - score[player_idx[p1]]))) for p2 in players} for p1 in players})
+    print_matrix('pred', players, {p1: {p2: 1 / (1 + math.exp(
+        ((score[player_idx[p2]] - score[player_idx[p1]]) * scale).item())) for p2 in players} for p1 in players})
     print()
     for p in players:
-        print(f'{p}: {round(float(score[player_idx[p]]))}')
+        print(f'{p}: {round(score[player_idx[p]].item())}')
 
 
 if __name__ == '__main__':

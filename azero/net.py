@@ -1,6 +1,7 @@
 
 import os
 import torch
+import asyncio
 from torch import nn
 from asyncio import Future, Event
 
@@ -112,6 +113,8 @@ class NetManager:
         self.queue = []
         self.queue_full = Event()
         self.min_size = min_size
+        self.loop = asyncio.new_event_loop()
+        self.loop.create_task(self.run())
 
     async def run(self):
         while True:

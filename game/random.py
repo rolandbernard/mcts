@@ -13,7 +13,6 @@ class Random(Player):
         pause()
 
     def apply_action(self, action: int) -> float:
-        self.game.apply(action)
         return 0.0
 
     def select_action(self) -> int:

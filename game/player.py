@@ -2,10 +2,15 @@
 import os
 import signal
 from time import sleep
-from multiprocessing import Process, Pipe
+from multiprocessing import Process, Pipe, set_start_method
 from multiprocessing.connection import Connection
 
 from game.connect4 import Game
+
+try:
+    set_start_method('spawn')
+except RuntimeError:
+    pass
 
 
 class Urgent(Exception):
@@ -17,12 +22,14 @@ class Player(Process):
     game: Game
     parent_conn: Connection
     child_conn: Connection
+    thinking: bool
 
     def __init__(self, game: Game, to_play: int):
         super().__init__()
         self.game = game.copy()
         self.to_play = to_play
         self.parent_conn, self.child_conn = Pipe()
+        self.thinking = False
 
     def send(self, msg):
         self.parent_conn.send(msg)
@@ -56,7 +63,8 @@ class Player(Process):
 
     def run(self):
         def signal_handle(signum, frame):
-            raise Urgent()
+            if self.thinking:
+                raise Urgent()
         signal.signal(signal.SIGURG, signal_handle)
         while self.child_conn.readable:
             try:
@@ -72,6 +80,9 @@ class Player(Process):
                             value = self.apply_action(msg[1])
                             self.child_conn.send(value)
                     else:
+                        self.thinking = True
                         self.think()
-            except:
+            except Urgent:
                 pass
+            finally:
+                self.thinking = False
