@@ -1,12 +1,14 @@
 
-import asyncio
-
 from azero.azero import AZeroConfig, TracedGame, ReplayBuffer
 from azero.mcts import Node, run_mcts, select_action
 from azero.net import NetManager
 
 
 async def play_game(config: AZeroConfig, net: NetManager, game: TracedGame):
+    """
+    Play a single game of self-play using the given network and game. Use MCTS to select each action
+    and save the policy resulting from visit counts at each step.
+    """
     root = Node()
     while not game.terminal():
         await run_mcts(config, net, game, root, config.simulations)
@@ -18,6 +20,9 @@ async def play_game(config: AZeroConfig, net: NetManager, game: TracedGame):
 
 
 async def self_play_thread(config: AZeroConfig, net: NetManager):
+    """
+    Continually play games and save them to the replay buffer.
+    """
     replay_buffer = ReplayBuffer(config)
     while True:
         game = TracedGame()

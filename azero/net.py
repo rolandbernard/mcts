@@ -10,6 +10,11 @@ from azero.azero import AZeroConfig
 
 
 class ResidualBlock(nn.Module):
+    """
+    Implements a single residual block with a given number of channels for two 3x3 convolutions.
+    The hidden layer has the same channel count as the input and output layers.
+    """
+
     def __init__(self, channel: int = 32):
         super().__init__()
         self.module = nn.Sequential(
@@ -26,6 +31,10 @@ class ResidualBlock(nn.Module):
 
 
 class Net(nn.Module):
+    """
+    Implements the network. The architecture is inspired by the AlphaZero paper, but uses a smaller
+    network with fewer channels and residual blocks.
+    """
     device: str
 
     def __init__(self):
@@ -58,7 +67,11 @@ class Net(nn.Module):
         common = self.common(inputs.to(self.device))
         return (self.value(common), self.policy(common))
 
-    def eval_now(self, inputs: list[torch.Tensor]) -> list[tuple[float, list[float]]]:
+    def evaluate(self, inputs: list[torch.Tensor]) -> list[tuple[float, list[float]]]:
+        """
+        Evaluate the network for all elements of the list and return the result after normalizing
+        the policy logits.
+        """
         input = torch.stack(inputs)
         values, policies = self.forward(input)
         results: list[tuple[float, list[float]]] = []
@@ -70,6 +83,9 @@ class Net(nn.Module):
 
 
 class NetStorage:
+    """
+    Class handling the saving and retrieving of network checkpoints.
+    """
     path: str
     net: Net
     step: int
@@ -77,6 +93,9 @@ class NetStorage:
 
     @classmethod
     def available_networks(cls, config: AZeroConfig) -> list[int]:
+        """
+        Return the list of all checkpoint steps available in the nets directory.
+        """
         return [int(n) for n in os.listdir(config.net_dir)]
 
     def __init__(self, config: AZeroConfig, max_step: None | int = None):
@@ -87,6 +106,9 @@ class NetStorage:
         self.update_network()
 
     def save_network(self, step: int, loss: float, net: Net):
+        """
+        Save the network parameters as a new checkpoint.
+        """
         torch.save({
             'step': step,
             'loss': loss,
@@ -94,23 +116,35 @@ class NetStorage:
         }, self.path + f'/{step}')
 
     def update_network(self):
+        """
+        Load the newest network (before max_step if set) if a new network is available.
+        """
         latest = max((int(n) for n in os.listdir(
             self.path) if self.max_step is None or int(n) <= self.max_step), default=0)
         if latest > self.step:
             try:
                 checkpoint = torch.load(self.path + f'/{latest}')
                 self.net.load_state_dict(checkpoint['net'])
+                # Setting the network to eval mode. (Important for batch normalization.)
                 self.net.eval()
                 self.step = latest
             except:
                 pass
 
     def latest_network(self) -> Net:
+        """
+        Return a network with the latest network parameters. If necessary this will load the new
+        weights from a checkpoint.
+        """
         self.update_network()
         return self.net
 
 
 class NetManager:
+    """
+    Class handling the queuing and batched execution of the network. This is not used for the
+    default azero player, buf during self play and for the valuenn and policynn players.
+    """
     nets: NetStorage
     queue: list[tuple[torch.Tensor, Future]]
     queue_full: Event
@@ -126,6 +160,9 @@ class NetManager:
         self.loop.create_task(self.run())
 
     async def run(self):
+        """
+        Continous loop waiting for the queue to fill, and then evaluating the network.
+        """
         while True:
             await self.queue_full.wait()
             self.queue_full.clear()
@@ -133,6 +170,9 @@ class NetManager:
                 self.evaluate_queue()
 
     def evaluate_queue(self):
+        """
+        Evaluate all entries of the queue using the latest network.
+        """
         queue, self.queue = self.queue, []
         if queue:
             net = self.nets.latest_network()
@@ -142,6 +182,10 @@ class NetManager:
                 f.set_result((value[i], policy[i]))
 
     def enqueue(self, image: torch.Tensor) -> Future[tuple[torch.Tensor, torch.Tensor]]:
+        """
+        Enqueue a new image to be evaluated by the network. The returned future will be resolved
+        once the queue is next emptied.
+        """
         future = Future()
         self.queue.append((image, future))
         if len(self.queue) >= self.min_size:
@@ -149,6 +193,10 @@ class NetManager:
         return future
 
     async def evaluate(self, image: torch.Tensor) -> tuple[float, list[float]]:
+        """
+        Evaluate the image and return the value and policy. The policy logits are normalized before
+        returning.
+        """
         value, policy_logits = await self.enqueue(image)
         policy = torch.exp(policy_logits)
         policy_sum = torch.sum(policy)

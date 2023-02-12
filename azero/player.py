@@ -15,6 +15,9 @@ def available_nets() -> list[int]:
 
 
 class AZeroPlayer(Player):
+    """
+    Implements a player that uses MCTS using the value and policy networks learned using self-play.
+    """
     nets:  NetStorage
     max_step: None | int
     root: Node
@@ -31,9 +34,11 @@ class AZeroPlayer(Player):
         super().run()
 
     def think(self):
+        # Loop mcts batches until we run out of time and are interrupted.
         loop_mcts(config, self.nets.latest_network(), self.game, self.root)
 
     def apply_action(self, action: int) -> float:
+        # We can reuse part of the tree for the following steps.
         if action in self.root.children:
             self.root = self.root.children[action]
         else:
@@ -45,6 +50,9 @@ class AZeroPlayer(Player):
 
 
 class PolicyNnPlayer(Player):
+    """
+    Implements a player that uses only the policy network learned during by self-play.
+    """
     nets:  NetManager
     max_step: None | int
     temp: float
@@ -65,7 +73,7 @@ class PolicyNnPlayer(Player):
         pause()
 
     def apply_action(self, _: int) -> float:
-        return 0.0
+        return 0.0  # The policy does not provide a value estimate
 
     async def evaluate_net(self) -> dict[int, float]:
         _, policy = await self.nets.evaluate(game_image(self.game))
@@ -79,6 +87,9 @@ class PolicyNnPlayer(Player):
 
 
 class ValueNnPlayer(Player):
+    """
+    Implements a player that uses only the value network learned during by self-play.
+    """
     nets:  NetManager
     max_step: None | int
     value: float
@@ -102,6 +113,9 @@ class ValueNnPlayer(Player):
         return self.value if self.game.to_play() == self.to_play else -self.value
 
     async def evaluate_net(self) -> dict[int, float]:
+        """
+        Evaluate the value using the network for each action.
+        """
         actions = self.game.legal_actions()
         to_eval: list[Game] = []
         for action in actions:
@@ -117,5 +131,7 @@ class ValueNnPlayer(Player):
 
     def select_action(self) -> int:
         values = self.nets.loop.run_until_complete(self.evaluate_net())
+        # Always choose the action resulting in the minimum value (i.e. best from current players
+        # perspective).
         self.value = min(values.values())
         return min(self.game.legal_actions(), key=lambda a: values[a])

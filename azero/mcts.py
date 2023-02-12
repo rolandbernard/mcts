@@ -2,8 +2,6 @@
 import math
 import random
 import numpy as np
-import asyncio
-from asyncio import Future
 
 from game.connect4 import Game
 from azero.azero import AZeroConfig, game_image
@@ -11,6 +9,9 @@ from azero.net import NetManager, Net
 
 
 class Node:
+    """
+    Class used to represent nodes in the search tree.
+    """
     prior: float
     visit_count: int
     value_sum: float
@@ -38,18 +39,30 @@ class Node:
 
 
 def expand(node: Node, game: Game, prior: list[float]):
+    """
+    Expand the given node using the legal actions in the given state and the liven priors.
+    """
     actions = game.legal_actions()
     for action in actions:
         node.children[action] = Node(prior[action], game.to_play())
 
 
 def backpropagate(path: list[Node], value: float, to_play: int):
+    """
+    Backpropagate the terminal value to each node in the given search path. This makes sure to use
+    value or -value depending on the player of each node.
+    """
     for node in path:
         node.value_sum += (value if to_play == node.to_play else -value)
         node.visit_count += 1
 
 
 def ucb_score(config: AZeroConfig, parent: Node, child: Node, virtual_loss: None | dict[Node, float] = None) -> float:
+    """
+    UCB (Upper Confidence Bound) score as used in the AlphaZero paper.
+    Combines the estimated value of an action with the number of visits, prior probabilities, and
+    virtual_loss.
+    """
     parent_count = parent.visit_count
     child_count = child.visit_count
     if virtual_loss is not None:
@@ -64,10 +77,17 @@ def ucb_score(config: AZeroConfig, parent: Node, child: Node, virtual_loss: None
 
 
 def select_child(config: AZeroConfig, node: Node, virtual_loss: None | dict[Node, float] = None) -> tuple[int, Node]:
+    """
+    Select a child of the given node by taking the maximum ucb_score. For use during the select
+    stage of the MCTS algorithm.
+    """
     return max(node.children.items(), key=lambda x: ucb_score(config, node, x[1], virtual_loss))
 
 
 async def run_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node, n: int):
+    """
+    Run n simulations one after the other using the given net, game state and root node.
+    """
     if not root.expanded():
         _, prior = await net.evaluate(game_image(game))
         expand(root, game, prior)
@@ -81,6 +101,7 @@ async def run_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node,
             search_game.apply(action)
             search_path.append(node)
         if search_game.terminal():
+            # If the game is terminal, don't expand and use the exact value.
             value = search_game.terminal_value(search_game.to_play())
         else:
             value, prior = await net.evaluate(game_image(search_game))
@@ -89,6 +110,10 @@ async def run_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node,
 
 
 def run_mcts_batch(config: AZeroConfig, net: Net, game: Game, root: Node):
+    """
+    Run a number of mcts simulations in parallel using virtual loss. This allows batching of the
+    evaluation using the network leading to more efficient execution.
+    """
     virtual_loss: dict[Node, float] = {}
     search_paths: list[list[Node]] = []
     search_games: list[Game] = []
@@ -101,27 +126,35 @@ def run_mcts_batch(config: AZeroConfig, net: Net, game: Game, root: Node):
             search_game.apply(action)
             search_path.append(node)
         if node in virtual_loss:
+            # Expand every node only once. Break and evaluate the batch.
             break
         for node in search_path:
+            # Add virtual loss to all nodes on the search path.
             virtual_loss[node] = virtual_loss.get(node, 0) \
                 + config.virtual_loss
         search_paths.append(search_path)
         search_games.append(search_game)
-    results = net.eval_now([game_image(game) for game in search_games])
+    results = net.evaluate([game_image(game) for game in search_games])
     for i, (value, prior) in enumerate(results):
         search_path, search_game = search_paths[i], search_games[i]
         to_play = search_game.to_play()
         if search_games[i].terminal():
+            # If the game is terminal, don't expand and use the exact value.
             backpropagate(
                 search_path, search_game.terminal_value(to_play), to_play)
         else:
+            # Expand the last node of teach search path. Use priors and value predicted by the
+            # network.
             expand(search_path[-1], search_game, prior)
             backpropagate(search_path, value, to_play)
 
 
 def loop_mcts(config: AZeroConfig, net: Net, game: Game, root: Node):
+    """
+    Run mcts batches in an infinite loop.
+    """
     if not root.expanded():
-        _, prior = net.eval_now([game_image(game)])[0]
+        _, prior = net.evaluate([game_image(game)])[0]
         expand(root, game, prior)
     add_exploration_noise(config, root)
     while True:
@@ -129,6 +162,10 @@ def loop_mcts(config: AZeroConfig, net: Net, game: Game, root: Node):
 
 
 def add_exploration_noise(config: AZeroConfig, node: Node):
+    """
+    Add noise to the prior probabilities of the given nodes children.
+    The noise is added to encourage exploration of the root actions.
+    """
     actions = list(node.children.keys())
     noise = np.random.dirichlet([config.dirichlet_noise] * len(actions))
     frac = config.exp_frac
@@ -137,6 +174,11 @@ def add_exploration_noise(config: AZeroConfig, node: Node):
 
 
 def select_action_policy(policy: dict[int, float], temp: float = 0) -> int:
+    """
+    Select an action using the given policy.
+    If temp is zero select the action with maximum policy value. Otherwise select action i
+    proportionally to policy[i]**(1 / temp).
+    """
     if temp == 0:
         return max(policy.keys(), key=lambda a: policy[a])
     else:
@@ -145,5 +187,8 @@ def select_action_policy(policy: dict[int, float], temp: float = 0) -> int:
 
 
 def select_action(node: Node, temp: float = 0) -> int:
+    """
+    Select and action based on the visit counts in the given node and the given temperature.
+    """
     visit_counts = {a: float(n.visit_count) for a, n in node.children.items()}
     return select_action_policy(visit_counts, temp)

@@ -6,6 +6,10 @@ from game.player import Player
 
 
 class Random(Player):
+    """
+    Player that chooses uniformly at random from the legal actions.
+    """
+
     def sleep(self, time: float):
         pass
 

@@ -5,6 +5,11 @@ from game.player import Player, Game
 
 
 class MctsPlayer(Player):
+    """
+    Implements a player using simple MCTS using only random rollout.
+    The subtree of the selected action is reused during the next turn, and computation continues
+    during the opponents turn.
+    """
     config: MctsConfig
     root: Node
     temp: float

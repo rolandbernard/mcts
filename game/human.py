@@ -3,6 +3,10 @@ from game.player import Player
 
 
 class Human(Player):
+    """
+    Input take from stdin. Does not have a time limit.
+    """
+
     def start(self):
         pass
 

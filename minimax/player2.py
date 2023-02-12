@@ -6,6 +6,9 @@ from game.player import Player, Game
 
 
 class Node:
+    """
+    Class used to represent nodes in the search tree.
+    """
     result: int
     value: float
     depth: int
@@ -30,6 +33,7 @@ class Node:
             self.set_result(game.terminal_value(game.to_play()))
         elif depth != 0:
             actions = game.legal_actions()
+            # Sort the actions based on there value, so we expand the best actions first.
             actions.sort(key=lambda a:
                          self.children[a].key() if a in self.children else (0, 0, 0))
             for action in actions:
@@ -51,6 +55,11 @@ class Node:
 
 
 class Minimax2Player(Player):
+    """
+    This is a variation of the minimax player that keeps the search tree alive to reuse it for
+    deeper iterations or the next step. This allows the player to think also during the opponents
+    turn.
+    """
     depth: int
     root: Node
 
@@ -67,6 +76,7 @@ class Minimax2Player(Player):
             pause()
 
     def apply_action(self, action: int) -> float:
+        # Decrease the depth and select the corresponding child as the new root
         self.depth = max(0, self.depth - 1)
         if action in self.root.children:
             self.root = self.root.children[action]

@@ -25,6 +25,7 @@ PLAYERS = {
     'valuenn': ValueNnPlayer,
 }
 
+# Add all training checkpoints of the neural network
 for step in available_nets():
     PLAYERS[f'azero{step}'] = lambda game, to_play, step=step: AZeroPlayer(
         game, to_play, step)
@@ -39,6 +40,12 @@ for step in available_nets():
 
 
 def run_match(p1: str, p2: str, time: float, render: bool) -> tuple[float, float]:
+    """
+    Run a single match against the players p1 and p2. The per move time limit is specified. Render
+    the game states only if render is True.
+    The return values are in range the [0, 1] for each player where 0 is a loss, 1 is a win and 0.5
+    is a draw.
+    """
     game = Game()
     players: list[Player] = [PLAYERS[p1](game, 0), PLAYERS[p2](game, 1)]
     for player in players:
@@ -61,18 +68,24 @@ def run_match(p1: str, p2: str, time: float, render: bool) -> tuple[float, float
         if render:
             game.render()
             if game.terminal_value(0) > 0:
-                print('game terminated and player 1 won')
+                print(f'game terminated and player 1 ({p1}) won')
             elif game.terminal_value(1) > 0:
-                print('game terminated and player 2 won')
+                print(f'game terminated and player 2 ({p2}) won')
             else:
                 print('game terminated in a draw')
     finally:
+        # Make sure that we terminate all players
         for player in players:
             player.terminate()
     return ((game.terminal_value(0) + 1) / 2, (game.terminal_value(1) + 1) / 2)
 
 
 def main():
+    """
+    Run a series of matches. For each match, select the players uniformly at random from the pool of
+    possible players. A player will never play against himself.
+    Play results are logged to stdout, but can also be written to a log file.
+    """
     parser = ArgumentParser(
         prog='evaluate.py', description='play a connect 4 tournament')
     parser.add_argument('players', metavar="PLAYER", choices=PLAYERS.keys(), nargs='*',
@@ -85,8 +98,10 @@ def main():
                         help='log game results to the given file')
     args = parser.parse_args()
     if not args.players:
-        args.players = list(PLAYERS.keys())
+        args.players = list(
+            PLAYERS.keys() - {'azero', 'azero-t1', 'policynn', 'policynn-t1', 'valuenn'})
     if len(args.players) < 2:
+        # We need at least two players, otherwise we can not select two distinct players
         print('need at least two players to run a tournament')
         exit(1)
     while True:
