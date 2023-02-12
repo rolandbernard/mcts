@@ -17,7 +17,6 @@ class Player(Process):
     game: Game
     parent_conn: Connection
     child_conn: Connection
-    thinking: bool
 
     def __init__(self, game: Game, to_play: int):
         super().__init__()
@@ -58,8 +57,7 @@ class Player(Process):
 
     def run(self):
         def signal_handle(signum, frame):
-            if self.thinking:
-                raise Urgent()
+            raise Urgent()
         signal.signal(signal.SIGURG, signal_handle)
         while self.child_conn.readable:
             try:
@@ -75,9 +73,6 @@ class Player(Process):
                             value = self.apply_action(msg[1])
                             self.child_conn.send(value)
                     else:
-                        self.thinking = True
                         self.think()
             except Urgent:
                 pass
-            finally:
-                self.thinking = False

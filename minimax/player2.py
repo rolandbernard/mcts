@@ -20,13 +20,19 @@ class Node:
         self.value = value
         self.depth = depth
 
+    def key(self):
+        return (self.result, self.value, -self.depth if self.value > 0 else self.depth)
+
     def evaluate_state(self, game: Game, depth: int):
         if self.result != 0:
             return
         elif game.terminal():
             self.set_result(game.terminal_value(game.to_play()))
         elif depth != 0:
-            for action in game.legal_actions():
+            actions = game.legal_actions()
+            actions.sort(key=lambda a:
+                         self.children[a].key() if a in self.children else (0, 0, 0))
+            for action in actions:
                 if action not in self.children:
                     self.children[action] = Node()
                 clone = game.copy()
@@ -40,8 +46,8 @@ class Node:
                 depth = max(child.depth for child in self.children.values())
                 self.set_result(-1, depth + 1)
             else:
-                value_sum = sum(chld.value for chld in self.children.values())
-                self.value = value_sum / len(self.children)
+                value_sum = sum(-chld.value for chld in self.children.values())
+                self.value = value_sum / len(self.children) / 2
 
 
 class Minimax2Player(Player):
@@ -69,9 +75,6 @@ class Minimax2Player(Player):
         return -self.root.value
 
     def select_action(self) -> int:
-        best = max((-child.result, -child.value, child.depth)
-                   for child in self.root.children.values())
+        best = min(child.key() for child in self.root.children.values())
         return random.choice([
-            a for a, child in self.root.children.items()
-            if best == (-child.result, -child.value, child.depth)
-        ])
+            a for a, child in self.root.children.items() if best == child.key()])

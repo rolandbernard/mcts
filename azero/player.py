@@ -15,7 +15,7 @@ def available_nets() -> list[int]:
 
 
 class AZeroPlayer(Player):
-    nets:  NetManager
+    nets:  NetStorage
     max_step: None | int
     root: Node
     temp: float
@@ -27,12 +27,11 @@ class AZeroPlayer(Player):
         self.temp = temp
 
     def run(self):
-        self.nets = NetManager(config, max_step=self.max_step)
+        self.nets = NetStorage(config, max_step=self.max_step)
         super().run()
 
     def think(self):
-        self.nets.loop.run_until_complete(
-            loop_mcts(config, self.nets, self.game, self.root))
+        loop_mcts(config, self.nets.latest_network(), self.game, self.root)
 
     def apply_action(self, action: int) -> float:
         if action in self.root.children:

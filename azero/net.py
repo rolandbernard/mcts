@@ -58,6 +58,16 @@ class Net(nn.Module):
         common = self.common(inputs.to(self.device))
         return (self.value(common), self.policy(common))
 
+    def eval_now(self, inputs: list[torch.Tensor]) -> list[tuple[float, list[float]]]:
+        input = torch.stack(inputs)
+        values, policies = self.forward(input)
+        results: list[tuple[float, list[float]]] = []
+        for value, policy_logits in zip(values, policies):
+            policy = torch.exp(policy_logits)
+            policy_sum = torch.sum(policy)
+            results.append((value.item(), (policy / policy_sum).tolist()))
+        return results
+
 
 class NetStorage:
     path: str
@@ -142,4 +152,4 @@ class NetManager:
         value, policy_logits = await self.enqueue(image)
         policy = torch.exp(policy_logits)
         policy_sum = torch.sum(policy)
-        return (float(value), (policy / policy_sum).tolist())
+        return (value.item(), (policy / policy_sum).tolist())

@@ -7,7 +7,7 @@ from asyncio import Future
 
 from game.connect4 import Game
 from azero.azero import AZeroConfig, game_image
-from azero.net import NetManager
+from azero.net import NetManager, Net
 
 
 class Node:
@@ -88,11 +88,10 @@ async def run_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node,
         backpropagate(search_path, value, search_game.to_play())
 
 
-async def run_mcts_batch(config: AZeroConfig, net: NetManager, game: Game, root: Node):
+def run_mcts_batch(config: AZeroConfig, net: Net, game: Game, root: Node):
     virtual_loss: dict[Node, float] = {}
     search_paths: list[list[Node]] = []
     search_games: list[Game] = []
-    results: list = []
     for _ in range(config.play_batch):
         search_game = game.copy()
         search_path = [root]
@@ -108,26 +107,25 @@ async def run_mcts_batch(config: AZeroConfig, net: NetManager, game: Game, root:
                 + config.virtual_loss
         search_paths.append(search_path)
         search_games.append(search_game)
-        if search_game.terminal():
-            result = Future()
-            result.set_result(
-                (search_game.terminal_value(search_game.to_play()), None))
-            results.append(result)
+    results = net.eval_now([game_image(game) for game in search_games])
+    for i, (value, prior) in enumerate(results):
+        search_path, search_game = search_paths[i], search_games[i]
+        to_play = search_game.to_play()
+        if search_games[i].terminal():
+            backpropagate(
+                search_path, search_game.terminal_value(to_play), to_play)
         else:
-            results.append(net.evaluate(game_image(search_game)))
-    for i, (value, prior) in enumerate(await asyncio.gather(*results)):
-        if prior is not None:
-            expand(search_paths[i][-1], search_games[i], prior)
-        backpropagate(search_paths[i], value, search_games[i].to_play())
+            expand(search_path[-1], search_game, prior)
+            backpropagate(search_path, value, to_play)
 
 
-async def loop_mcts(config: AZeroConfig, net: NetManager, game: Game, root: Node):
+def loop_mcts(config: AZeroConfig, net: Net, game: Game, root: Node):
     if not root.expanded():
-        _, prior = await net.evaluate(game_image(game))
+        _, prior = net.eval_now([game_image(game)])[0]
         expand(root, game, prior)
     add_exploration_noise(config, root)
     while True:
-        await run_mcts_batch(config, net, game, root)
+        run_mcts_batch(config, net, game, root)
 
 
 def add_exploration_noise(config: AZeroConfig, node: Node):

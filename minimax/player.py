@@ -39,6 +39,7 @@ def evaluate_action(game: Game, action: int, depth: int) -> float:
 class MinimaxPlayer(Player):
     depth: list[int]
     value: list[float]
+    pred: float
 
     def __init__(self, game: Game, to_play: int):
         super().__init__(game, to_play)
@@ -57,13 +58,16 @@ class MinimaxPlayer(Player):
         else:
             pause()
 
-    def apply_action(self, action: int) -> float:
-        value = self.value[action]
+    def apply_action(self, _: int) -> float:
         self.depth = [0 for _ in self.game.all_actions()]
         self.value = [0 for _ in self.depth]
-        return value
+        return self.pred if self.game.to_play() == self.to_play else -self.pred
+
+    def key(self, a: int):
+        return (self.value[a], -self.depth[a] if self.value[a] > 0 else self.depth[a])
 
     def select_action(self) -> int:
         legal = self.game.legal_actions()
-        best = max((self.value[i], self.depth[i]) for i in legal)
-        return random.choice([i for i in legal if (self.value[i], self.depth[i]) == best])
+        best = max(self.key(i) for i in legal)
+        self.pred = best[0]
+        return random.choice([i for i in legal if self.key(i) == best])
