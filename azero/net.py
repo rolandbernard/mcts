@@ -65,6 +65,10 @@ class NetStorage:
     step: int
     max_step: None | int
 
+    @classmethod
+    def available_networks(cls, config: AZeroConfig) -> list[int]:
+        return [int(n) for n in os.listdir(config.net_dir)]
+
     def __init__(self, config: AZeroConfig, max_step: None | int = None):
         self.path = config.net_dir
         self.step = 0
@@ -79,14 +83,9 @@ class NetStorage:
             'net': net.state_dict(),
         }, self.path + f'/{step}')
 
-    def available_networks(self) -> list[int]:
-        return [
-            int(n) for n in os.listdir(self.path)
-            if self.max_step is None or int(n) <= self.max_step
-        ]
-
     def update_network(self):
-        latest = max(self.available_networks(), default=0)
+        latest = max((int(n) for n in os.listdir(
+            self.path) if self.max_step is None or int(n) <= self.max_step), default=0)
         if latest > self.step:
             try:
                 checkpoint = torch.load(self.path + f'/{latest}')

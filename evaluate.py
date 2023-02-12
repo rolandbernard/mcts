@@ -25,17 +25,17 @@ PLAYERS = {
     'valuenn': ValueNnPlayer,
 }
 
-for net in available_nets():
-    PLAYERS[f'azero{net}'] = lambda game, to_play: AZeroPlayer(
-        game, to_play, net)
-    PLAYERS[f'azero{net}-t1'] = lambda game, to_play: AZeroPlayer(
-        game, to_play, net, temp=1)
-    PLAYERS[f'policynn{net}'] = lambda game, to_play: PolicyNnPlayer(
-        game, to_play, net)
-    PLAYERS[f'policynn{net}-t1'] = lambda game, to_play: PolicyNnPlayer(
-        game, to_play, net, temp=1)
-    PLAYERS[f'valuenn{net}'] = lambda game, to_play: ValueNnPlayer(
-        game, to_play, net)
+for step in available_nets():
+    PLAYERS[f'azero{step}'] = lambda game, to_play, step=step: AZeroPlayer(
+        game, to_play, step)
+    PLAYERS[f'azero{step}-t1'] = lambda game, to_play, step=step: AZeroPlayer(
+        game, to_play, step, temp=1)
+    PLAYERS[f'policynn{step}'] = lambda game, to_play, step=step: PolicyNnPlayer(
+        game, to_play, step)
+    PLAYERS[f'policynn{step}-t1'] = lambda game, to_play, step=step: PolicyNnPlayer(
+        game, to_play, step, temp=1)
+    PLAYERS[f'valuenn{step}'] = lambda game, to_play, step=step: ValueNnPlayer(
+        game, to_play, step)
 
 
 def run_match(p1: str, p2: str, time: float, render: bool) -> tuple[float, float]:

@@ -11,7 +11,7 @@ config = AZeroConfig()
 
 
 def available_nets() -> list[int]:
-    return NetStorage(config).available_networks()
+    return NetStorage.available_networks(config)
 
 
 class AZeroPlayer(Player):

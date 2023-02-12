@@ -7,11 +7,6 @@ from multiprocessing.connection import Connection
 
 from game.connect4 import Game
 
-try:
-    set_start_method('spawn')
-except RuntimeError:
-    pass
-
 
 class Urgent(Exception):
     pass
