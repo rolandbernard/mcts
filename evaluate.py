@@ -100,6 +100,8 @@ def main():
                         help='render the games played')
     parser.add_argument('-l', '--log', type=str, default=None,
                         help='log game results to the given file')
+    parser.add_argument('--against', choices=PLAYERS.keys(), default=None,
+                        help='this player should be part of every match')
     args = parser.parse_args()
     if not args.players:
         args.players = list(
@@ -109,7 +111,11 @@ def main():
         print('error: need at least two players to run a tournament')
         exit(1)
     while True:
-        p1, p2 = random.sample(args.players, 2)
+        if args.against is None:
+            p1, p2 = random.sample(args.players, 2)
+        else:
+            p1, p2 = random.sample(
+                [args.against, random.choice(args.players)], 2)
         print(f'{p1} {p2} ', end='')
         (r1, r2) = run_match(p1, p2, args.time, args.render, args.delay)
         if args.log is not None:

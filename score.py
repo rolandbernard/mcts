@@ -1,4 +1,5 @@
 
+import json
 import math
 import torch
 from argparse import ArgumentParser
@@ -23,10 +24,11 @@ def print_matrix(name: str, players: list[str], scores: dict[str, dict[str, floa
 
 
 def main():
+    device = 'cuda' if torch.has_cuda else 'cpu'
     """
-    Try to find parameters b_i for each player i and the scale s.
+    Try to find parameters b_i for each player i, bias b and the scale s.
     Minimize the cross entropy using logistic regression where we predict game outcomes using
-    w_i = sigmoid(s * (b_i - b_j)) where w_i is the probability that player i won against player j.
+    w_ij = sigmoid(s * (b + b_i - b_j)) where w_ij is the probability that player i won against player j.
     """
     parser = ArgumentParser(
         prog='score.py', description='score the different players in a log file')
@@ -39,6 +41,10 @@ def main():
                         help='point difference that should result in ~75%% win rate (only used when fixing less than two player)')
     parser.add_argument('--fix', metavar="PLAYER=SCORE", default=[],
                         nargs='+', help='fix the score for a given player')
+    parser.add_argument('--iter', type=int, default=200_000,
+                        help='number of iterations to run the optimizer for')
+    parser.add_argument('--out', type=str,
+                        help='output json dictionary for the computed scores')
     args = parser.parse_args()
     fix = {v.split('=')[0].strip(): int(v.split('=')[1]) for v in args.fix}
     scores: dict[str, dict[str, list[float]]] = defaultdict(
@@ -69,34 +75,49 @@ def main():
         coef[i, player_idx[p1]] = 1
         coef[i, player_idx[p2]] = -1
         y[i] = e
-    fixed = torch.tensor([[fix[p] if p in fix else 0] for p in players])
-    mask = torch.tensor([[0 if p in fix else 1] for p in players])
+    coef = coef.to(device)
+    y = y.to(device)
+    fixed = torch.tensor([[fix[p] if p in fix else 0]
+                         for p in players], device=device)
+    mask = torch.tensor([[0 if p in fix else 1]
+                        for p in players], device=device)
     # The scale in the arguments is the point difference for a 75% win rate (odds = 3/1).
-    scale = torch.tensor(math.log(3) / args.scale, requires_grad=len(fix) >= 2)
-    x = torch.ones((len(players), 1), requires_grad=True)
-    optim = torch.optim.Adam([x, scale], 1)
-    for i in range(200_000):
-        optim.zero_grad()
-        score = fixed + mask * x
-        pred = scale * (coef @ score)
-        loss = torch.nn.functional.binary_cross_entropy_with_logits(pred, y)
-        loss.backward()
-        if i % 1_000 == 0:
-            print(f'\x1b[999D\x1b[A\x1b[Kloss: {loss.item()}')
-        optim.step()
+    scale = torch.tensor(math.log(3) / args.scale,
+                         requires_grad=len(fix) >= 2, device=device)
+    bias = torch.tensor(0.0, requires_grad=True, device=device)
+    x = torch.zeros((len(players), 1), requires_grad=True, device=device)
+    try:
+        optim = torch.optim.Adam([x, scale, bias], 1)
+        for i in range(args.iter):
+            optim.zero_grad()
+            score = fixed + mask * x
+            pred = scale * (bias + coef @ score)
+            loss = torch.nn.functional.binary_cross_entropy_with_logits(
+                pred, y)
+            loss.backward()
+            if i % 1_000 == 0:
+                print(
+                    f'\x1b[999D\x1b[Kloss: {loss.item()} ({100 * (i + 1) / args.iter:3.0f}%)', end='', flush=True)
+            optim.step()
+    except KeyboardInterrupt:
+        pass
     score = fixed + mask * x
     if not fix:
         # If not fixed, translate scores so the average is the specified average.
         score += args.average - torch.mean(score)
+    score = score.to('cpu')
+    bias = bias.to('cpu')
+    scale = scale.to('cpu')
     players.sort(key=lambda x: -score[player_idx[x]].item())
     args.players.sort(key=lambda x: -score[player_idx[x]].item())
     print()
     print_matrix('target', args.players, {p1: {p2: (
-        v / c) if c != 0 else math.nan for p2, (v, c) in sc.items()} for p1, sc in scores.items()})
+        scores[p1][p2][0] / scores[p1][p2][1]) if scores[p1][p2][1] != 0 else math.nan for p2 in args.players} for p1 in args.players})
     print()
     print_matrix('pred', args.players, {p1: {p2: 1 / (1 + torch.exp(
-        (score[player_idx[p2]] - score[player_idx[p1]]) * scale).item()) for p2 in players} for p1 in players})
+        (score[player_idx[p2]] - score[player_idx[p1]]) * scale).item()) for p2 in args.players} for p1 in args.players})
     print()
+    print(f'bias: {bias.item():.3f} scale: {math.log(3) / scale.item():.3f}')
     for p in players:
         wins = sum(w for w, _ in scores[p].values())
         games = sum(c for _, c in scores[p].values())
@@ -107,6 +128,10 @@ def main():
         if wins == 0 or wins == games:
             print(f' \x1b[m\x1b[91m!!!', end='')
         print(f'\x1b[m')
+    if args.out:
+        with open(args.out, 'w') as file:
+            file.write(json.dumps(
+                {p: score[player_idx[p]].item() for p in players}))
 
 
 if __name__ == '__main__':
