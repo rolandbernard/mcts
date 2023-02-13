@@ -92,7 +92,7 @@ class Player(Process):
         signal.signal(signal.SIGURG, signal_handle)
         while self.child_conn.readable:
             try:
-                while True:
+                while self.child_conn.readable:
                     if self.child_conn.poll():
                         msg = self.child_conn.recv()
                         if msg[0] == 'terminate':

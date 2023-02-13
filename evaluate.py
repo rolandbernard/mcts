@@ -1,4 +1,6 @@
 
+import math
+import json
 import random
 from time import sleep
 from argparse import ArgumentParser
@@ -82,6 +84,18 @@ def run_match(p1: str, p2: str, time: float, render: bool, delay: float = 5) -> 
     return ((game.terminal_value(0) + 1) / 2, (game.terminal_value(1) + 1) / 2)
 
 
+def run_logged_match(p1: str, p2: str, time: float, render: bool, delay: float, log: None | str, scores: dict[str, float]):
+    print(f'{p1} ({scores[p1]:.0f}) {p2} ({scores[p2]:.0f}) ', end='')
+    (r1, r2) = run_match(p1, p2, time, render, delay)
+    if log is not None:
+        with open(log, 'a') as file:
+            file.write(f'{p1} {p2} {r1} {r2}\n')
+    print(f'{r1} {r2}')
+    exp = 1 / (1 + math.exp((scores[p2] - scores[p1]) / 200 * math.log(3)))
+    scores[p1] += 40 * (r1 - exp)
+    scores[p2] += 40 * (r2 - 1 + exp)
+
+
 def main():
     """
     Run a series of matches. For each match, select the players uniformly at random from the pool of
@@ -102,26 +116,45 @@ def main():
                         help='log game results to the given file')
     parser.add_argument('--against', choices=PLAYERS.keys(), default=None,
                         help='this player should be part of every match')
+    parser.add_argument('--scores', type=str, default=None,
+                        help='play matches between players with close scores (update internal scores)')
     args = parser.parse_args()
     if not args.players:
         args.players = list(
-            PLAYERS.keys() - {'azero', 'azero-t1', 'policynn', 'policynn-t1', 'valuenn'})
+            PLAYERS.keys() - {'azero', 'azero-t1', 'policynn', 'policynn-t1', 'valuenn', 'human'})
     if len(args.players) < 2:
         # We need at least two players, otherwise we can not select two distinct players
         print('error: need at least two players to run a tournament')
         exit(1)
-    while True:
-        if args.against is None:
-            p1, p2 = random.sample(args.players, 2)
-        else:
-            p1, p2 = random.sample(
-                [args.against, random.choice(args.players)], 2)
-        print(f'{p1} {p2} ', end='')
-        (r1, r2) = run_match(p1, p2, args.time, args.render, args.delay)
-        if args.log is not None:
-            with open(args.log, 'a') as log:
-                log.write(f'{p1} {p2} {r1} {r2}\n')
-        print(f'{r1} {r2}')
+    if args.scores and args.scores != 'auto':
+        with open(args.scores) as file:
+            scores = json.load(file)
+        for p in args.players:
+            if p not in scores:
+                scores[p] = 1500.0
+    else:
+        scores = {p: 1500.0 for p in args.players}
+    if args.scores:
+        args.players.sort(key=lambda p: scores[p] + 100 * random.random())
+        for p1, p2 in zip(args.players[::2], args.players[1::2]):
+            run_logged_match(p1, p2, args.time, args.render,
+                             args.delay, args.log, scores)
+            run_logged_match(p2, p1, args.time, args.render,
+                             args.delay, args.log, scores)
+        for p1, p2 in zip(args.players[1::2], args.players[2::2]):
+            run_logged_match(p1, p2, args.time, args.render,
+                             args.delay, args.log, scores)
+            run_logged_match(p2, p1, args.time, args.render,
+                             args.delay, args.log, scores)
+    else:
+        while True:
+            if args.against is None:
+                p1, p2 = random.sample(args.players, 2)
+            else:
+                p1, p2 = random.sample(
+                    [args.against, random.choice(args.players)], 2)
+            run_logged_match(p1, p2, args.time, args.render,
+                             args.delay, args.log, scores)
 
 
 if __name__ == '__main__':

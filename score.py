@@ -45,6 +45,8 @@ def main():
                         help='number of iterations to run the optimizer for')
     parser.add_argument('--out', type=str,
                         help='output json dictionary for the computed scores')
+    parser.add_argument('-B', '--no-bias', action='store_true', default=False,
+                        help='fix bias at zero (normally added to account for first mover advantage)')
     args = parser.parse_args()
     fix = {v.split('=')[0].strip(): int(v.split('=')[1]) for v in args.fix}
     scores: dict[str, dict[str, list[float]]] = defaultdict(
@@ -84,7 +86,7 @@ def main():
     # The scale in the arguments is the point difference for a 75% win rate (odds = 3/1).
     scale = torch.tensor(math.log(3) / args.scale,
                          requires_grad=len(fix) >= 2, device=device)
-    bias = torch.tensor(0.0, requires_grad=True, device=device)
+    bias = torch.tensor(0.0, requires_grad=not args.no_bias, device=device)
     x = torch.zeros((len(players), 1), requires_grad=True, device=device)
     try:
         optim = torch.optim.Adam([x, scale, bias], 1)
@@ -124,14 +126,13 @@ def main():
         if p not in args.players:
             print(f'\x1b[2;3m', end='')
         print(
-            f'{round(score[player_idx[p]].item()):6} {p} ({wins}/{games} ~ {wins / games:.2f})', end='')
+            f'{score[player_idx[p]].item():6.0f} {p} ({wins}/{games} ~ {wins / games:.2f})', end='')
         if wins == 0 or wins == games:
             print(f' \x1b[m\x1b[91m!!!', end='')
         print(f'\x1b[m')
     if args.out:
         with open(args.out, 'w') as file:
-            file.write(json.dumps(
-                {p: score[player_idx[p]].item() for p in players}))
+            json.dump({p: score[player_idx[p]].item() for p in players}, file)
 
 
 if __name__ == '__main__':
