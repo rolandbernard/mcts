@@ -60,6 +60,7 @@ class MinimaxPlayer(Player):
         super().__init__(game, to_play)
         self.depth = [0 for _ in self.game.all_actions()]
         self.value = [0 for _ in self.depth]
+        self.pred = 0
 
     def think(self):
         # Expand only actions which we don't know the value for yet
@@ -80,7 +81,7 @@ class MinimaxPlayer(Player):
         # When an action is applied, we have to restart the search
         self.depth = [0 for _ in self.game.all_actions()]
         self.value = [0 for _ in self.depth]
-        return self.pred if self.game.to_play() == self.to_play else -self.pred
+        return -self.pred if self.game.to_play() == self.to_play else self.pred
 
     def key(self, a: int):
         """

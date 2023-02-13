@@ -179,7 +179,9 @@ def select_action_policy(policy: dict[int, float], temp: float = 0) -> int:
     If temp is zero select the action with maximum policy value. Otherwise select action i
     proportionally to policy[i]**(1 / temp).
     """
-    if temp == 0:
+    if len(policy) <= 1:
+        return list(policy.keys())[0]
+    elif temp == 0:
         return max(policy.keys(), key=lambda a: policy[a])
     else:
         prop = [v**(1 / temp) for v in policy.values()]

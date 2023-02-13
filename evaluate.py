@@ -1,5 +1,6 @@
 
 import random
+from time import sleep
 from argparse import ArgumentParser
 
 from game.connect4 import Game
@@ -39,7 +40,7 @@ for step in available_nets():
         game, to_play, step)
 
 
-def run_match(p1: str, p2: str, time: float, render: bool) -> tuple[float, float]:
+def run_match(p1: str, p2: str, time: float, render: bool, delay: float = 5) -> tuple[float, float]:
     """
     Run a single match against the players p1 and p2. The per move time limit is specified. Render
     the game states only if render is True.
@@ -51,6 +52,7 @@ def run_match(p1: str, p2: str, time: float, render: bool) -> tuple[float, float
     for player in players:
         player.start()
     try:
+        sleep(delay)  # Some delay to start the players
         while not game.terminal():
             if render:
                 game.render()
@@ -92,6 +94,8 @@ def main():
                         help='{human,random,minimax,minimax2,mcts,mcts-t1,azero,azero-t1,policynn,policynn-t1,valuenn}')
     parser.add_argument('-t', '--time', type=float, default=5.0,
                         help='time limit for the non-human players')
+    parser.add_argument('-d', '--delay', type=float, default=5.0,
+                        help='delay before starting the game to give player time to startup')
     parser.add_argument('-r', '--render', action='store_true', default=False,
                         help='render the games played')
     parser.add_argument('-l', '--log', type=str, default=None,
@@ -102,12 +106,12 @@ def main():
             PLAYERS.keys() - {'azero', 'azero-t1', 'policynn', 'policynn-t1', 'valuenn'})
     if len(args.players) < 2:
         # We need at least two players, otherwise we can not select two distinct players
-        print('need at least two players to run a tournament')
+        print('error: need at least two players to run a tournament')
         exit(1)
     while True:
         p1, p2 = random.sample(args.players, 2)
         print(f'{p1} {p2} ', end='')
-        (r1, r2) = run_match(p1, p2, args.time, args.render)
+        (r1, r2) = run_match(p1, p2, args.time, args.render, args.delay)
         if args.log is not None:
             with open(args.log, 'a') as log:
                 log.write(f'{p1} {p2} {r1} {r2}\n')
