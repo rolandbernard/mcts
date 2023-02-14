@@ -104,7 +104,7 @@ def main():
     """
     parser = ArgumentParser(
         prog='evaluate.py', description='play a connect 4 tournament')
-    parser.add_argument('players', metavar="PLAYER", choices=PLAYERS.keys(), nargs='*',
+    parser.add_argument('players', metavar="PLAYER", nargs='*',
                         help='{human,random,minimax,minimax2,mcts,mcts-t1,azero,azero-t1,policynn,policynn-t1,valuenn}')
     parser.add_argument('-t', '--time', type=float, default=5.0,
                         help='time limit for the non-human players')
@@ -114,7 +114,7 @@ def main():
                         help='render the games played')
     parser.add_argument('-l', '--log', type=str, default=None,
                         help='log game results to the given file')
-    parser.add_argument('--against', choices=PLAYERS.keys(), default=None,
+    parser.add_argument('--against', nargs='+', default=None,
                         help='this player should be part of every match')
     parser.add_argument('--scores', type=str, default=None,
                         help='play matches between players with close scores (update internal scores)')
@@ -122,9 +122,15 @@ def main():
     if not args.players:
         args.players = list(
             PLAYERS.keys() - {'azero', 'azero-t1', 'policynn', 'policynn-t1', 'valuenn', 'human'})
-    if len(args.players) < 2:
+    elif args.against and args.scores:
+        args.players.extend(args.against)
+    elif len(args.players) < 2:
         # We need at least two players, otherwise we can not select two distinct players
         print('error: need at least two players to run a tournament')
+        exit(1)
+    elif any(p not in PLAYERS for p in args.players):
+        print(
+            f'error: unknown players {set(p for p in args.players if p not in PLAYERS)}')
         exit(1)
     if args.scores and args.scores != 'auto':
         with open(args.scores) as file:
@@ -134,25 +140,26 @@ def main():
                 scores[p] = 1500.0
     else:
         scores = {p: 1500.0 for p in args.players}
-    if args.scores:
-        args.players.sort(key=lambda p: scores[p] + 100 * random.random())
-        for p1, p2 in zip(args.players[::2], args.players[1::2]):
-            run_logged_match(p1, p2, args.time, args.render,
-                             args.delay, args.log, scores)
-            run_logged_match(p2, p1, args.time, args.render,
-                             args.delay, args.log, scores)
-        for p1, p2 in zip(args.players[1::2], args.players[2::2]):
-            run_logged_match(p1, p2, args.time, args.render,
-                             args.delay, args.log, scores)
-            run_logged_match(p2, p1, args.time, args.render,
-                             args.delay, args.log, scores)
-    else:
-        while True:
+    while True:
+        if args.scores:
+            args.players.sort(key=lambda p: scores[p] + 400 * random.random())
+            matches = list(zip(args.players[::2], args.players[1::2])) + \
+                list(zip(args.players[1::2], args.players[2::2]))
+            if args.against is not None:
+                matches = [match for match in matches if any(
+                    player in match for player in args.against)]
+            random.shuffle(matches)
+            for p1, p2 in matches:
+                run_logged_match(p1, p2, args.time, args.render,
+                                 args.delay, args.log, scores)
+                run_logged_match(p2, p1, args.time, args.render,
+                                 args.delay, args.log, scores)
+        else:
             if args.against is None:
                 p1, p2 = random.sample(args.players, 2)
             else:
                 p1, p2 = random.sample(
-                    [args.against, random.choice(args.players)], 2)
+                    [random.choice(args.against), random.choice(args.players)], 2)
             run_logged_match(p1, p2, args.time, args.render,
                              args.delay, args.log, scores)
 

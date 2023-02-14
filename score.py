@@ -97,7 +97,7 @@ def main():
             loss = torch.nn.functional.binary_cross_entropy_with_logits(
                 pred, y)
             loss.backward()
-            if i % 1_000 == 0:
+            if i % (args.iter // 100) == 0:
                 print(
                     f'\x1b[999D\x1b[Kloss: {loss.item()} ({100 * (i + 1) / args.iter:3.0f}%)', end='', flush=True)
             optim.step()
