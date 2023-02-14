@@ -8,7 +8,7 @@ from game.connect4 import Game
 
 @dataclass
 class MctsConfig:
-    pucb_c: float = 1.25    # exploration constant in UCB
+    pucb_c: float = 1.5     # exploration constant in UCT
     exp_thr: int = 10       # expansion threshold
 
 
@@ -69,11 +69,14 @@ def backpropagate(path: list[Node], value: int, to_play: int):
 
 def ucb_score(config: MctsConfig, parent: Node, child: Node) -> float:
     """
-    UCB (Upper Confidence Bound) score as used in the AlphaZero paper.
+    UCT (Upper Confidence Bound 1 for Trees).
     Combines the estimated value of an action with the number of visits.
     """
-    prior_score = config.pucb_c * \
-        math.sqrt(parent.visit_count) / (1 + child.visit_count)
+    if child.visit_count != 0:
+        prior_score = config.pucb_c * \
+            math.sqrt(math.log(parent.visit_count) / child.visit_count)
+    else:
+        prior_score = config.pucb_c
     value_score = (child.value() + 1) / 2
     return prior_score + value_score
 

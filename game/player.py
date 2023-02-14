@@ -94,15 +94,18 @@ class Player(Process):
             try:
                 while self.child_conn.readable:
                     if self.child_conn.poll():
-                        msg = self.child_conn.recv()
-                        if msg[0] == 'terminate':
+                        try:
+                            msg = self.child_conn.recv()
+                            if msg[0] == 'terminate':
+                                return
+                            elif msg[0] == 'select':
+                                self.child_conn.send(self.select_action())
+                            elif msg[0] == 'apply':
+                                self.game.apply(msg[1])
+                                value = self.apply_action(msg[1])
+                                self.child_conn.send(value)
+                        except EOFError:
                             return
-                        elif msg[0] == 'select':
-                            self.child_conn.send(self.select_action())
-                        elif msg[0] == 'apply':
-                            self.game.apply(msg[1])
-                            value = self.apply_action(msg[1])
-                            self.child_conn.send(value)
                     else:
                         self.think()
             except Urgent:
