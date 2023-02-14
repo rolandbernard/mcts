@@ -72,6 +72,8 @@ class Net(nn.Module):
         Evaluate the network for all elements of the list and return the result after normalizing
         the policy logits.
         """
+        if not inputs:
+            return []
         input = torch.stack(inputs)
         values, policies = self.forward(input)
         results: list[tuple[float, list[float]]] = []

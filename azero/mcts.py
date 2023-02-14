@@ -149,7 +149,7 @@ def run_mcts_batch(config: AZeroConfig, net: Net, game: Game, root: Node):
             backpropagate(search_path, value, to_play)
 
 
-def loop_mcts(config: AZeroConfig, net: Net, game: Game, root: Node):
+def loop_mcts(config: AZeroConfig, net: Net, game: Game, root: Node, simulations: None | int = None):
     """
     Run mcts batches in an infinite loop.
     """
@@ -157,8 +157,12 @@ def loop_mcts(config: AZeroConfig, net: Net, game: Game, root: Node):
         _, prior = net.evaluate([game_image(game)])[0]
         expand(root, game, prior)
     add_exploration_noise(config, root)
-    while True:
-        run_mcts_batch(config, net, game, root)
+    if simulations is None:
+        while True:
+            run_mcts_batch(config, net, game, root)
+    else:
+        for _ in range(simulations):
+            run_mcts_batch(config, net, game, root)
 
 
 def add_exploration_noise(config: AZeroConfig, node: Node):

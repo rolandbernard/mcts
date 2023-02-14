@@ -62,6 +62,31 @@ class Game:
             filled = self.current | self.other
             return [i for i in range(Game.WIDTH) if not (filled & (1 << ((Game.HEIGHT + 1) * (i + 1) - 2)))]
 
+    def win_mask_for(self, pos: int) -> int:
+        def shift(n: int, i: int) -> int:
+            return n << i if i >= 0 else n >> -i
+        """
+        Return a mask of all pieces that are part of the winning position.
+        """
+        w = 0
+        for i in range(4):
+            # vertical
+            w |= shift(pos, 0 - i) & shift(pos, 1 - i) & shift(
+                pos, 2 - i) & shift(pos, 3 - i)
+            # horizontal
+            w |= shift(pos, (0 - i) * (Game.HEIGHT + 1)) & shift(pos, (1 - i) * (Game.HEIGHT + 1)) & shift(
+                pos, (2 - i) * (Game.HEIGHT + 1)) & shift(pos, (3 - i) * (Game.HEIGHT + 1))
+            # diagonal 1
+            w |= shift(pos, (0 - i) * Game.HEIGHT) & shift(pos, (1 - i) * Game.HEIGHT) & shift(
+                pos, (2 - i) * Game.HEIGHT) & shift(pos, (3 - i) * Game.HEIGHT)
+            # diagonal 2
+            w |= shift(pos, (0 - i) * (Game.HEIGHT + 2)) & shift(pos, (1 - i) * (Game.HEIGHT + 2)) & shift(
+                pos, (2 - i) * (Game.HEIGHT + 2)) & shift(pos, (3 - i) * (Game.HEIGHT + 2))
+        return w
+
+    def win_mask(self) -> int:
+        return self.win_mask_for(self.current) | self.win_mask_for(self.other)
+
     def has_won(self, pos: int) -> bool:
         """
         Test whether pos contains a winning pattern.
@@ -100,14 +125,17 @@ class Game:
         """
         return (self.other.bit_count() + self.current.bit_count()) % 2
 
+    def get_from(self, set: int, col: int, row: int) -> int:
+        """
+        Returns whether for a given set a given column, and row is set.
+        """
+        return (set >> (col * (Game.HEIGHT + 1) + row)) & 1
+
     def get(self, other: bool | int, col: int, row: int) -> int:
         """
         Returns whether for a given player a given column, and row contain a piece.
         """
-        if other:
-            return (self.other >> (col * (Game.HEIGHT + 1) + row)) & 1
-        else:
-            return (self.current >> (col * (Game.HEIGHT + 1) + row)) & 1
+        return self.get_from(self.other if other else self.current, col, row)
 
     def render(self, suggestions: None | list[float] = None):
         """

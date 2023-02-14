@@ -29,13 +29,17 @@ class AZeroPlayer(Player):
         self.root = Node()
         self.temp = temp
 
-    def run(self):
+    def run(self, cont: bool = True):
         self.nets = NetStorage(config, max_step=self.max_step)
-        super().run()
+        if cont:
+            super().run()
 
-    def think(self):
+    def think(self, simulations: None | int = None, reset: bool = False):
+        if reset:
+            self.root = Node()
         # Loop mcts batches until we run out of time and are interrupted.
-        loop_mcts(config, self.nets.latest_network(), self.game, self.root)
+        loop_mcts(config, self.nets.latest_network(),
+                  self.game, self.root, simulations)
 
     def apply_action(self, action: int) -> float:
         # We can reuse part of the tree for the following steps.
@@ -47,6 +51,12 @@ class AZeroPlayer(Player):
 
     def select_action(self) -> int:
         return select_action(self.root, self.temp)
+
+    def policy(self) -> dict[int, float]:
+        return {a: child.visit_count for a, child in self.root.children.items()}
+
+    def values(self) -> dict[int, float]:
+        return {a: child.value() for a, child in self.root.children.items()}
 
 
 class PolicyNnPlayer(Player):
@@ -84,6 +94,11 @@ class PolicyNnPlayer(Player):
         action = select_action_policy(policy, self.temp)
         self.value = policy[action]
         return action
+
+    def policy(self) -> dict[int, float]:
+        _, policy = NetStorage(config, self.max_step).latest_network().evaluate(
+            [game_image(self.game)])[0]
+        return {a: policy[a] for a in self.game.legal_actions()}
 
 
 class ValueNnPlayer(Player):
@@ -124,10 +139,7 @@ class ValueNnPlayer(Player):
             to_eval.append(game_copy)
         results = await asyncio.gather(
             *[self.nets.evaluate(game_image(game)) for game in to_eval])
-        return {
-            action: results[i][0]
-            for i, action in enumerate(actions)
-        }
+        return {action: res[0] for action, res in zip(actions, results)}
 
     def select_action(self) -> int:
         values = self.nets.loop.run_until_complete(self.evaluate_net())
@@ -135,3 +147,14 @@ class ValueNnPlayer(Player):
         # perspective).
         self.value = min(values.values())
         return min(self.game.legal_actions(), key=lambda a: values[a])
+
+    def values(self) -> dict[int, float]:
+        actions = self.game.legal_actions()
+        to_eval: list[Game] = []
+        for action in actions:
+            game_copy = self.game.copy()
+            game_copy.apply(action)
+            to_eval.append(game_copy)
+        results = NetStorage(config, self.max_step).latest_network().evaluate(
+            [game_image(game) for game in to_eval])
+        return {action: -res[0] for action, res in zip(actions, results)}

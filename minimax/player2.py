@@ -68,8 +68,13 @@ class Minimax2Player(Player):
         self.depth = 0
         self.root = Node()
 
-    def think(self):
-        if self.root.result == 0:
+    def think(self, depth: None | int = None, reset: bool = False):
+        if reset:
+            self.root = Node()
+        if depth is not None:
+            self.root.evaluate_state(self.game, depth)
+            self.depth = depth
+        elif self.root.result == 0:
             self.root.evaluate_state(self.game, self.depth + 1)
             self.depth += 1
         else:
@@ -88,3 +93,6 @@ class Minimax2Player(Player):
         best = min(child.key() for child in self.root.children.values())
         return random.choice([
             a for a, child in self.root.children.items() if best == child.key()])
+
+    def values(self) -> dict[int, float]:
+        return {a: -child.value for a, child in self.root.children.items()}

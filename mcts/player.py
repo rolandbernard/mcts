@@ -20,8 +20,10 @@ class MctsPlayer(Player):
         self.root = Node()
         self.temp = temp
 
-    def think(self):
-        run_mcts(self.config, self.game, self.root, 10_000)
+    def think(self, simulations: int = 10_000, reset: bool = False):
+        if reset:
+            self.root = Node()
+        run_mcts(self.config, self.game, self.root, simulations)
 
     def apply_action(self, action: int) -> float:
         if action in self.root.children:
@@ -32,3 +34,9 @@ class MctsPlayer(Player):
 
     def select_action(self) -> int:
         return select_action(self.root, self.temp)
+
+    def policy(self) -> dict[int, float]:
+        return {a: child.visit_count for a, child in self.root.children.items()}
+
+    def values(self) -> dict[int, float]:
+        return {a: child.value() for a, child in self.root.children.items()}
