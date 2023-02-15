@@ -71,9 +71,11 @@ class Minimax2Player(Player):
     def think(self, depth: None | int = None, reset: bool = False):
         if reset:
             self.root = Node()
+            self.depth = 0
         if depth is not None:
-            self.root.evaluate_state(self.game, depth)
-            self.depth = depth
+            for d in range(self.depth, depth + 1):
+                self.root.evaluate_state(self.game, d)
+                self.depth = depth
         elif self.root.result == 0:
             self.root.evaluate_state(self.game, self.depth + 1)
             self.depth += 1
@@ -96,3 +98,17 @@ class Minimax2Player(Player):
 
     def values(self) -> dict[int, float]:
         return {a: -child.value for a, child in self.root.children.items()}
+
+    def tree_stats(self) -> str:
+        def count_tree(node: Node) -> tuple[int, int]:
+            if node.children:
+                children = [count_tree(child)
+                            for child in node.children.values()]
+                return (
+                    1 + sum(count for count, _ in children),
+                    1 + max(depth for _, depth in children),
+                )
+            else:
+                return (1, 0)
+        count, depth = count_tree(self.root)
+        return f'{count} nodes. {depth} max depth.'

@@ -58,6 +58,20 @@ class AZeroPlayer(Player):
     def values(self) -> dict[int, float]:
         return {a: child.value() for a, child in self.root.children.items()}
 
+    def tree_stats(self) -> str:
+        def count_tree(node: Node) -> tuple[int, int]:
+            if node.children:
+                children = [count_tree(child)
+                            for child in node.children.values()]
+                return (
+                    1 + sum(count for count, _ in children),
+                    1 + max(depth for _, depth in children),
+                )
+            else:
+                return (1, 0)
+        count, depth = count_tree(self.root)
+        return f'{self.root.visit_count} simulations. {count} nodes. {depth} max depth.'
+
 
 class PolicyNnPlayer(Player):
     """

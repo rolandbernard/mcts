@@ -4,7 +4,6 @@ import ipywidgets as widgets
 import matplotlib.pyplot as plt
 
 from game.connect4 import Game
-from game.random import Random
 from minimax.player2 import Minimax2Player
 from mcts.player import MctsPlayer
 from azero.player import AZeroPlayer, ValueNnPlayer, PolicyNnPlayer
@@ -54,6 +53,7 @@ def button_click(game: WidgetGame, action: int):
 
 
 def game_widget_for(game: WidgetGame) -> widgets.Widget:
+    id = np.random.randint(0, 1 << 32)
     buttons = []
     for _ in range(6):
         for c in range(7):
@@ -63,7 +63,7 @@ def game_widget_for(game: WidgetGame) -> widgets.Widget:
             )
             button.on_click(lambda _, c=c: button_click(game, c))
             buttons.append(button)
-    game.on_change('Z_game_widget', lambda: update_buttons(game, buttons))
+    game.on_change(f'X_game_widget{id}', lambda: update_buttons(game, buttons))
     update_buttons(game, buttons)
     layout = widgets.Layout(
         width='fit-content',
@@ -110,48 +110,52 @@ def plot_policy(ax, name: str, policy: dict[int, float], limit=None):
 
 
 def draw_to(out: widgets.Output, player, name: str):
-    out.clear_output()
+    out.clear_output(True)
     with out:
+        plt.ioff()
+        if name == 'MiniMax' or name == 'MCTS' or name == 'AZero':
+            print(' ', player.tree_stats())
         if name == 'MiniMax' or name == 'ValueNN':
-            fig = plt.figure()
+            fig = plt.figure(figsize=(6, 3))
             ax = fig.add_subplot(1, 1, 1)
             plot_policy(ax, 'Estimated value', player.values(), (-1, 1))
             plt.show()
         elif name == 'MCTS' or name == 'AZero':
-            fig = plt.figure()
+            fig = plt.figure(figsize=(6, 6))
             ax = fig.add_subplot(2, 1, 1)
-            plot_policy(ax, 'Estimated value', player.values(), (0, 1))
+            plot_policy(ax, 'Estimated value', player.values(), (-1, 1))
             ax = fig.add_subplot(2, 1, 2)
             plot_policy(ax, 'Policy', player.policy())
             plt.show()
         elif name == 'PolicyNN':
-            fig = plt.figure()
+            fig = plt.figure(figsize=(6, 3))
             ax = fig.add_subplot(1, 1, 1)
             plot_policy(ax, 'Policy', player.policy(), (0, 1))
             plt.show()
 
 
-def update_player(game: WidgetGame, to_play: int, name: str, output: widgets.Output, play: list):
-    game.on_change('A_think', lambda: None)
-    game.on_change('Z_insight_widget', lambda: None)
+def update_player(game: WidgetGame, to_play: int, name: str, output: widgets.Output, play: list, id: int):
+    game.on_change(f'A_think{id}', lambda: None)
+    game.on_change(f'X_insight_widget{id}', lambda: None)
     if name == 'MiniMax':
         player = Minimax2Player(game, to_play)
         player.game = game
-        player.think(depth=5)
-        game.on_change('A_think', lambda: player.think(depth=6, reset=True))
+        player.think(depth=6, reset=True)
+        game.on_change(
+            f'A_think{id}', lambda: player.think(depth=6, reset=True))
     elif name == 'MCTS':
         player = MctsPlayer(game, to_play)
         player.game = game
-        player.think(simulations=5_000)
-        game.on_change('A_think', lambda: player.think(
-            simulations=5_000, reset=True))
+        player.think(simulations=10_000, reset=True)
+        game.on_change(f'A_think{id}', lambda: player.think(
+            simulations=10_000, reset=True))
     elif name == 'AZero':
         player = AZeroPlayer(game, to_play)
         player.game = game
         player.run(False)
-        player.think(simulations=50)
-        game.on_change('A_think', lambda: player.think(
-            simulations=50, reset=True))
+        player.think(simulations=20, reset=True)
+        game.on_change(f'A_think{id}', lambda: player.think(
+            simulations=20, reset=True))
     elif name == 'ValueNN':
         player = ValueNnPlayer(game, to_play)
         player.game = game
@@ -166,7 +170,8 @@ def update_player(game: WidgetGame, to_play: int, name: str, output: widgets.Out
     play[0] = player
     play[1] = name
     draw_to(output, player, name)
-    game.on_change('Z_insight_widget', lambda: draw_to(output, player, name))
+    game.on_change(f'X_insight_widget{id}',
+                   lambda: draw_to(output, player, name))
 
 
 def apply_action(game: WidgetGame, player, name: str):
@@ -178,25 +183,48 @@ def apply_action(game: WidgetGame, player, name: str):
         values = player.policy()
     else:
         return
-    action = max(values.keys(), key=lambda a: values[a])
-    game.apply(action)
+    if values:
+        action = max(values.keys(), key=lambda a: values[a])
+        game.apply(action)
 
 
-def player_widget_for(game: WidgetGame, to_play: int = 0, default: str = 'ValueNN') -> widgets.Widget:
+def set_auto_play(game: WidgetGame, play: list, auto: widgets.Button, to_play: int):
+    if auto.button_style == '':
+        auto.button_style = 'danger'
+        def auto_play(game: WidgetGame, play: list, to_play: int):
+            if game.to_play() == to_play:
+                apply_action(game, play[0], play[1])
+        game.on_change(f'Z_auto{to_play}',
+                       lambda: auto_play(game, play, to_play))
+        auto_play(game, play, to_play)
+    else:
+        auto.button_style = ''
+        game.on_change(f'Z_auto{to_play}', lambda: None)
+
+
+def player_widget_for(game: WidgetGame, to_play: int = 0, default: str = 'None') -> widgets.Widget:
+    id = np.random.randint(0, 1 << 32)
     player_name = widgets.Dropdown(
-        description='Player',
         value=default,
         options=['MiniMax', 'MCTS', 'AZero', 'ValueNN', 'PolicyNN', 'None'],
-        disabled=False
+        layout=widgets.Layout(width='150px', height='30px'),
+    )
+    auto = widgets.Button(
+        description='auto',
+        layout=widgets.Layout(width='80px', height='30px'),
+    )
+    play = widgets.Button(
+        description='play',
+        layout=widgets.Layout(width='80px', height='30px'),
     )
     player = [None, '']
-    play = widgets.Button(description='play')
-    play.on_click(lambda _: apply_action(game, player[0], player[1]))
-    config = widgets.HBox(children=[player_name, play])
+    config = widgets.HBox(children=[player_name, play, auto])
     output = widgets.Output()
     children = [config, output]
-    update_player(game, to_play, default, output, player)
+    update_player(game, to_play, default, output, player, id)
     player_name.observe(
-        lambda c: update_player(game, to_play, c.new, output, player),
+        lambda c: update_player(game, to_play, c.new, output, player, id),
         names='value')  # type: ignore
+    play.on_click(lambda _: apply_action(game, player[0], player[1]))
+    auto.on_click(lambda _: set_auto_play(game, player, auto, to_play))
     return widgets.VBox(children=children)
