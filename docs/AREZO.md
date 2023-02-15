@@ -67,9 +67,9 @@ as the simulation result.
 The PUCT formula proposed by the AlphaZero paper differs from the ones previously discussed
 <sup>[(3)](#f3)</sup>. At each step of selection the action $a \in A_s$ is selected my maximizing
 the following:
-$$
-a = \argmax_{a \in A_s} \left( Q(s, a) + c_\text{putc} P(s, a) \frac{\sqrt{N(s)}}{1 + N(s, a)} \right)
-$$
+```math
+a = \arg \max_{a \in A_s} \left( Q(s, a) + c_\text{putc} P(s, a) \frac{\sqrt{N(s)}}{1 + N(s, a)} \right)
+```
 where $Q(s, a)$ is the approximate value of taking action $a$ from state $s$ based on the previous
 rounds; $N(s, a)$ is the number of times the action $a$ has been selected in previous rounds; and
 $N(s) = \sum_{a \in A_s} N(s, a)$ is the number of times the parent node (representing state $s$)
