@@ -1,5 +1,5 @@
 
-This repository contains some experimentation with [Monte Carlo Tree Search](https://en.wikipedia.org/wiki/Monte_Carlo_tree_search).
+This repository contains some experimentation with [Monte Carlo tree search](https://en.wikipedia.org/wiki/Monte_Carlo_tree_search).
 
 Some additional documentation for this project can be found here:
 * [docs/MCTS.md](docs/MCTS.md)

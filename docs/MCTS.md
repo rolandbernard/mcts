@@ -1,16 +1,16 @@
 
-# Monte Carlo Tree Search
+# Monte Carlo tree search
 
-This document gives an explanation of the Monte Carlo Tree Search (MCTS) algorithm. It covers the
+This document gives an explanation of the Monte Carlo tree search (MCTS) algorithm. It covers the
 use case, intuition, simple implementation, and some of its properties.
 
 ## Introduction
 ### Search
 
-The Monte Carlo Tree Search algorithm is a heuristic search algorithm. For many problems it is
+The Monte Carlo tree search algorithm is a heuristic search algorithm. For many problems it is
 possible to use search to make decisions. Often however the search space is too large to be searched
 completely, and an agent must use algorithms that can decide on the next action by observing only a
-small part of the search space. Monte Carlo Tree Search is one such algorithm that tries to prune a
+small part of the search space. Monte Carlo tree search is one such algorithm that tries to prune a
 large part of the search tree by focusing on the most promising sequences of actions. 
 
 ### Board games
@@ -38,20 +38,20 @@ The value function can be evaluated recursively, by so-called minimax search. Ho
 are too large to be fully explored, and the search must be truncated. This can be achieved by using
 an approximate value function $v(s) \approx v^*(s)$.
 
-Another alternative to minimax search is the use of Monte Carlo Tree Search.
+Another alternative to minimax search is the use of Monte Carlo tree search.
 
 
 ## Simple MCTS
 ### Algorithm overview
 
-The Monte Carlo Tree Search algorithm consists of four main parts. The algorithm operates on a
+The Monte Carlo tree search algorithm consists of four main parts. The algorithm operates on a
 search tree and keeps track of statistics associated to each node, which are used by the different
 parts.
 
-Each round of the algorithm starts with the selection of a leaf node. This may be followed by
-expanding the selected node, adding child nodes for some or all possible actions. After selection
-and expansion, the rollout, step is performed and then, at the end of each round, the result of the
-rollout is backpropagated from the leaf node up to the root of the search tree.
+Each round of the algorithm starts with the _selection_ of a leaf node. This may be followed by
+_expanding_ the selected node, adding child nodes for some or all possible actions. After selection
+and expansion, the _rollout_, step is performed and then, at the end of each round, the result of
+the rollout is _backpropagated_ from the leaf node up to the root of the search tree.
 
 For each edge $(s, a)$ in the search tree, the algorithm keeps the following statistics: $Q(s, a)$
 representing the current estimate for the expected outcome; and $N(s, a)$ representing the number of
@@ -170,7 +170,7 @@ many times for each simulation.
 For example, the original AlphaGo program used a policy network trained using supervised learning to
 predict actions taken by expert players and used that as the rollout policy <sup>[(1)](#f1)</sup>.
 
-#### Value estimation
+#### Evaluation function
 
 Another alternative is to replace the payouts with a single evaluation function. Instead of playing
 the game to the end, we use a heuristic function to predict the outcome of the game. This method has
@@ -186,12 +186,12 @@ playout results and evaluation function, as was done in the original AlphaGo ver
 
 ### Parallelism
 
-MCTS can be run concurrently on multiple threads. This can be done in multiple possible ways:
-* For each rollout step, we can perform many simulations in parallel and combine the results at the
+MCTS can be run concurrently on multiple threads. This can be done in multiple possible ways<sup>[(7)](#f7)</sup>:
+* _Leaf Parallelization_ For each rollout step, we can perform many simulations in parallel and combine the results at the
 end. With this approach the rest of the algorithm can be kept on a single thread.
-* Multiple threads can build independent trees, and the final decision on which action to take can
+* _Root Parallelization_ Multiple threads can build independent trees, and the final decision on which action to take can
 then be made by combining the results of the different trees.
-* Multiple threads can operate on the same tree, and protect concurrent access using locking, or
+* _Tree Parallelization_ Multiple threads can operate on the same tree, and protect concurrent access using locking, or
 atomic operations. For this approach virtual loss can be added to the nodes during the selection
 phase, to discourage multiple threads form exploding at the same time the same search path. This
 virtual loss must then be removed again at the backpropagation step. This is the method presented in
@@ -218,3 +218,7 @@ Artificial Intelligence 61.3 (2011): 203-230.
 
 <b id="f6">(6)</b> Silver, David, et al. "Mastering chess and shogi by self-play with a general reinforcement
 learning algorithm." arXiv preprint arXiv:1712.01815 (2017).
+
+<b id="f7">(7)</b> Chaslot, Guillaume MJ -B., Mark HM Winands, and H. Jaap van Den Herik. "Parallel
+monte-carlo tree search." Computers and Games: 6th International Conference, CG 2008, Beijing,
+China, September 29-October 1, 2008. Proceedings 6. Springer Berlin Heidelberg, 2008.
