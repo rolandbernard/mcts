@@ -64,6 +64,8 @@ def main():
                         help='fix bias at zero (normally added to account for first mover advantage)')
     parser.add_argument('--fuse', type=int, nargs='+',
                         help='fuse valuenn, policynn, and azero into blocks of given size')
+    parser.add_argument('--no-progress', action='store_true', default=False,
+                        help='do not print a progress indication')
     args = parser.parse_args()
     fix = {v.split('=')[0].strip(): int(v.split('=')[1]) for v in args.fix}
     scores: dict[str, dict[str, list[float]]] = defaultdict(
@@ -118,7 +120,7 @@ def main():
             loss = torch.nn.functional.binary_cross_entropy_with_logits(
                 pred, y)
             loss.backward()
-            if i % (args.iter // 100) == 0:
+            if i % (args.iter // 100) == 0 and not args.no_progress:
                 print(
                     f'\x1b[999D\x1b[Kloss: {loss.item()} ({100 * (i + 1) / args.iter:3.0f}%)', end='', flush=True)
             optim.step()

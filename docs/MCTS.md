@@ -75,7 +75,7 @@ algorithm consists in using the UCB1 formula for each of the internal nodes of t
 select the action to take next. At each internal node representing state $s$ we select among the
 actions $A_s$ the action $a$ that maximizes the upper confidence bound given by:
 $$
-a = \argmax_{a \in A_s} \left( Q(s, a) + c_\text{utc} \sqrt{\frac{ln N(s)}{N(s, a)}} \right)
+a = \argmax_{a \in A_s} \left( Q(s, a) + c_\text{utc} \sqrt{\frac{\ln N(s)}{N(s, a)}} \right)
 $$
 where $Q(s, a)$ is the approximate value of taking action $a$ from state $s$ based on the previous
 rounds; $N(s, a)$ is the number of times the action $a$ has been selected in previous rounds; and
