@@ -23,20 +23,20 @@ For these sorts of games, there is a state space $S$; an action space $A_s$ defi
 for any given state $s \in S$; and a state transition function $f(s, a)$ defining the successor
 state reached from a state $s \in S$ by selecting action $a \in A_s$. 
 
-The exists an optimal value function $v^*(s)$ that determines the outcome for the current player in
+The exists an optimal value function $v^\*(s)$ that determines the outcome for the current player in
 state $s$ if both players play optimally <sup>[(1)](#f1)</sup>. If the state $s$ is terminal, the
 games rules define this value. Otherwise, we can apply recursion:
-$$
+```math
 v^*(s) =
 \begin{cases}
     r(s),  & \text{if $s$ is terminal} \\
     \max_{a \in A_s} -v^*(f(s, a)), & \text{otherwise}
 \end{cases}
-$$
+```
 
 The value function can be evaluated recursively, by so-called minimax search. However, many games
 are too large to be fully explored, and the search must be truncated. This can be achieved by using
-an approximate value function $v(s) \approx v^*(s)$.
+an approximate value function $v(s) \approx v^\*(s)$.
 
 Another alternative to minimax search is the use of Monte Carlo tree search.
 
@@ -74,17 +74,17 @@ for solving the multi-armed bandit problem <sup>[(2)](#f2)</sup> <sup>[(3)](#f3)
 algorithm consists in using the UCB1 formula for each of the internal nodes of the search tree to
 select the action to take next. At each internal node representing state $s$ we select among the
 actions $A_s$ the action $a$ that maximizes the upper confidence bound given by:
-$$
-a = \argmax_{a \in A_s} \left( Q(s, a) + c_\text{utc} \sqrt{\frac{\ln N(s)}{N(s, a)}} \right)
-$$
+```math
+a = \arg \max_{a \in A_s} \left( Q(s, a) + c_\text{utc} \sqrt{\frac{\ln N(s)}{N(s, a)}} \right)
+```
 where $Q(s, a)$ is the approximate value of taking action $a$ from state $s$ based on the previous
 rounds; $N(s, a)$ is the number of times the action $a$ has been selected in previous rounds; and
 $N(s) = \sum_{a \in A_s} N(s, a)$ is the number of times the parent node (representing state $s$)
 has been selected in previous rounds.
 
 The constant $c_\text{utc}$ controls the balances between the exploitation and exploration terms of
-the formula, with higher values yielding more exploration. The original paper uses $c_\text{utc} =
-\sqrt{2}$ but in practice different values are used by different implementations.
+the formula, with higher values yielding more exploration. The original paper uses $c_\text{utc} = \sqrt{2}$
+but in practice different values are used by different implementations.
 
 ### Expansion
 
