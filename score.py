@@ -1,4 +1,5 @@
 
+import re
 import json
 import math
 import torch
@@ -21,6 +22,20 @@ def print_matrix(name: str, players: list[str], scores: dict[str, dict[str, floa
             e = scores[p1][p2]
             print(f' {e:8.5f}', end='')
         print()
+
+
+def fuse(name: str, steps: list[int]) -> str:
+    match = re.match('(valuenn|policynn|azero)(\\d*)(-t1)?', name)
+    if match:
+        step = int(match[2])
+        for s in steps:
+            if s >= step:
+                break
+        else:
+            s = step
+        return f'{match[1]}{s}{match[3] or ""}'
+    else:
+        return name
 
 
 def main():
@@ -47,6 +62,8 @@ def main():
                         help='output json dictionary for the computed scores')
     parser.add_argument('-B', '--no-bias', action='store_true', default=False,
                         help='fix bias at zero (normally added to account for first mover advantage)')
+    parser.add_argument('--fuse', type=int, nargs='+',
+                        help='fuse valuenn, policynn, and azero into blocks of given size')
     args = parser.parse_args()
     fix = {v.split('=')[0].strip(): int(v.split('=')[1]) for v in args.fix}
     scores: dict[str, dict[str, list[float]]] = defaultdict(
@@ -56,11 +73,15 @@ def main():
         with open(log) as file:
             for line in file:
                 [p1, p2, r1, r2] = line.split()
-                scores[p1][p2][0] += float(r1)
-                scores[p1][p2][1] += 1
-                scores[p2][p1][0] += float(r2)
-                scores[p2][p1][1] += 1
-                data.append([p1, p2, float(r1)])
+                if args.fuse:
+                    p1, p2 = fuse(p1, args.fuse), fuse(p2, args.fuse)
+                if p1 != p2:
+                    # Self games do not contribute to the scoring
+                    scores[p1][p2][0] += float(r1)
+                    scores[p1][p2][1] += 1
+                    scores[p2][p1][0] += float(r2)
+                    scores[p2][p1][1] += 1
+                    data.append([p1, p2, float(r1)])
     players = list(scores.keys())
     if not args.players:
         args.players = players
